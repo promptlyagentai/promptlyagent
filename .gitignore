@@ -79,6 +79,7 @@ docker/searxng/settings.yml.new
 
 # Local K3s deployment configuration (user-specific submodules)
 .gitmodules
+/charts
 
 # Custom docs sync script (environment-specific paths)
 /scripts/sync-docs-to-repo.sh
