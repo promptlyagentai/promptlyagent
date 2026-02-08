@@ -1,0 +1,171 @@
+/**
+ * Highlight.js Custom Theme for PromptlyAgent
+ *
+ * This stylesheet provides custom syntax highlighting for Highlight.js code blocks,
+ * integrated with the application's semantic theming system. It uses CSS custom
+ * properties from the theme system to ensure consistent appearance in both light
+ * and dark modes.
+ *
+ * Theme Integration:
+ * - Uses semantic tokens (--color-code-bg, --color-text-primary, etc.)
+ * - Adapts automatically to light/dark mode via CSS custom properties
+ * - Coordinates with markdown-styles.css for unified code presentation
+ *
+ * Key Features:
+ * - Consistent backgrounds using semantic color tokens
+ * - Dark mode overrides for syntax elements (primary-600 palette)
+ * - Styled comments, keywords, strings, numbers, and operators
+ * - Support for diff highlighting (additions/deletions)
+ *
+ * @see resources/css/themes/_base-tokens.css - Semantic color definitions
+ * @see resources/css/markdown/markdown-styles.css - Markdown code block styles
+ */
+
+/* ============================================
+   BASE STYLES
+   All hljs containers use semantic background
+   ============================================ */
+
+.hljs,
+code.hljs,
+pre.hljs,
+pre code.hljs,
+pre > code.hljs {
+    background: var(--color-code-bg) !important;
+    background-color: var(--color-code-bg) !important;
+    color: var(--color-text-primary) !important;
+}
+
+.hljs {
+    padding: 1rem;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+}
+
+/* Container padding and styling */
+pre:has(> code.hljs) {
+    background: var(--color-code-bg) !important;
+    background-color: var(--color-code-bg) !important;
+}
+
+/* ============================================
+   SYNTAX HIGHLIGHTING - LIGHT MODE
+   ============================================ */
+
+/* Strings, attributes, properties */
+.hljs-string,
+.hljs-attr,
+.hljs-attribute,
+.hljs-property {
+    color: var(--color-accent);
+}
+
+/* ============================================
+   SYNTAX HIGHLIGHTING - DARK MODE
+   Uses primary-600 for better contrast on dark backgrounds
+   ============================================ */
+
+:is(.dark) .hljs-string,
+:is(.dark) .hljs-attr,
+:is(.dark) .hljs-attribute,
+:is(.dark) .hljs-property {
+    color: var(--palette-primary-600);
+}
+
+/* Keywords, built-ins - emphasized with font weight */
+.hljs-keyword,
+.hljs-built_in,
+.hljs-selector-tag,
+.hljs-name,
+.hljs-tag {
+    color: var(--color-accent);
+    font-weight: 600;
+}
+
+:is(.dark) .hljs-keyword,
+:is(.dark) .hljs-built_in,
+:is(.dark) .hljs-selector-tag,
+:is(.dark) .hljs-name,
+:is(.dark) .hljs-tag {
+    color: var(--palette-primary-600);
+}
+
+/* Numbers, literals - slightly transparent for visual hierarchy */
+.hljs-number,
+.hljs-literal,
+.hljs-variable,
+.hljs-template-variable {
+    color: var(--color-accent);
+    opacity: 0.9;
+}
+
+:is(.dark) .hljs-number,
+:is(.dark) .hljs-literal,
+:is(.dark) .hljs-variable,
+:is(.dark) .hljs-template-variable {
+    color: var(--palette-primary-600);
+    opacity: 0.9;
+}
+
+/* ============================================
+   SEMANTIC ELEMENTS
+   ============================================ */
+
+/* Comments - tertiary text with italic style */
+.hljs-comment,
+.hljs-quote {
+    color: var(--color-text-tertiary);
+    font-style: italic;
+}
+
+/* Titles, functions - prominent with font weight */
+.hljs-title,
+.hljs-section,
+.hljs-type {
+    color: var(--color-text-primary);
+    font-weight: 600;
+}
+
+/* Punctuation, operators */
+.hljs-punctuation,
+.hljs-operator {
+    color: var(--color-text-secondary);
+}
+
+/* Meta, preprocessor - de-emphasized */
+.hljs-meta,
+.hljs-meta-keyword {
+    color: var(--color-text-tertiary);
+}
+
+/* ============================================
+   MARKDOWN & TEXT FORMATTING
+   ============================================ */
+
+/* Emphasis, strong */
+.hljs-emphasis {
+    font-style: italic;
+}
+
+.hljs-strong {
+    font-weight: bold;
+}
+
+/* Links - underlined for accessibility */
+.hljs-link {
+    text-decoration: underline;
+}
+
+/* ============================================
+   DIFF HIGHLIGHTING
+   Visual indicators for code changes
+   ============================================ */
+
+/* Deletion, addition */
+.hljs-deletion {
+    background-color: rgba(255, 0, 0, 0.1);
+}
+
+.hljs-addition {
+    background-color: rgba(0, 255, 0, 0.1);
+}

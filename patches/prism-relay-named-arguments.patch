@@ -1,0 +1,116 @@
+--- a/src/Relay.php
++++ b/src/Relay.php
+@@ -181,37 +181,37 @@
+         }
+ 
+         if ($this->hasNameParameter($definition)) {
+-            return $this->createNameBasedHandler($toolName);
++            return $this->createNameBasedHandler($toolName, $definition);
+         }
+ 
+         if ($this->hasScriptParameter($definition)) {
+             return fn ($script = null): string => $this->callMCPTool($toolName, ['script' => $script]);
+         }
+ 
+-        // Default generic handler for any other tool - handle both individual params and array
+-        return function (...$args) use ($toolName, $definition): string {
+-            // Check if we have named parameters (associative array)
+-            if ($args !== [] && array_keys($args) !== range(0, count($args) - 1)) {
+-                // We have named parameters, use them directly
+-                return $this->callMCPTool($toolName, $args);
+-            }
+-            // If first argument is an array, use it as parameters
+-            if (count($args) === 1 && isset($args[0]) && is_array($args[0])) {
+-                return $this->callMCPTool($toolName, $args[0]);
+-            }
+-
+-            // Otherwise, map positional arguments to parameter names
+-            $requiredParams = $this->getRequiredParameters($definition);
+-            $parameters = [];
+-
+-            foreach ($requiredParams as $index => $paramName) {
+-                if (isset($args[$index])) {
+-                    $parameters[$paramName] = $args[$index];
+-                }
+-            }
++        // Default generic handler - build dynamic handler with eval for named arguments
++        $properties = data_get($definition, 'inputSchema.properties', []);
++        $paramNames = array_keys($properties);
++
++        $params = [];
++        foreach ($paramNames as $name) {
++            $params[] = "\$$name = null";
++        }
++        $paramSignature = implode(', ', $params);
+ 
+-            return $this->callMCPTool($toolName, $parameters);
+-        };
++        $arrayItems = [];
++        foreach ($paramNames as $name) {
++            $arrayItems[] = "'$name' => \$$name";
++        }
++        $paramArray = implode(', ', $arrayItems);
++
++        $code = "return function($paramSignature) use (\$toolName) {
++            \$params = [$paramArray];
++            \$params = array_filter(\$params, fn(\$v) => \$v !== null && \$v !== '' && \$v !== []);
++            return \$this->callMCPTool(\$toolName, \$params);
++        };";
++
++        $handler = eval($code);
++        return \Closure::bind($handler, $this, static::class);
+     }
+ 
+     /**
+@@ -275,22 +275,37 @@
+         return data_get($definition, 'inputSchema.properties.script') !== null;
+     }
+ 
+-    protected function createNameBasedHandler(string $toolName): callable
++    protected function createNameBasedHandler(string $toolName, array $definition = []): callable
+     {
+-        return function ($name = null, $selector = null, $width = null, $height = null) use ($toolName): string {
+-            $params = ['name' => $name];
+-            if ($selector !== null) {
+-                $params['selector'] = $selector;
+-            }
+-            if ($width !== null) {
+-                $params['width'] = $width;
+-            }
+-            if ($height !== null) {
+-                $params['height'] = $height;
+-            }
++        $properties = data_get($definition, 'inputSchema.properties', []);
++        $paramNames = array_keys($properties);
++
++        if (empty($paramNames)) {
++            return function ($name = null) use ($toolName): string {
++                return $this->callMCPTool($toolName, ['name' => $name]);
++            };
++        }
++
++        $params = [];
++        foreach ($paramNames as $name) {
++            $params[] = "\$$name = null";
++        }
++        $paramSignature = implode(', ', $params);
++
++        $arrayItems = [];
++        foreach ($paramNames as $name) {
++            $arrayItems[] = "'$name' => \$$name";
++        }
++        $paramArray = implode(', ', $arrayItems);
++
++        $code = "return function($paramSignature) use (\$toolName) {
++            \$params = [$paramArray];
++            \$params = array_filter(\$params, fn(\$v) => \$v !== null && \$v !== '' && \$v !== []);
++            return \$this->callMCPTool(\$toolName, \$params);
++        };";
+ 
+-            return $this->callMCPTool($toolName, $params);
+-        };
++        $handler = eval($code);
++        return \Closure::bind($handler, $this, static::class);
+     }
+ 
+     /**

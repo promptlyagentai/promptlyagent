@@ -1,0 +1,94 @@
+# PromptlyAgent Licensing Information
+
+This software, PromptlyAgent, is offered under a dual-licensing model to provide flexibility for different use cases.
+
+---
+
+## Option 1: MIT License (for Personal and Non-Commercial Use)
+
+If your use of PromptlyAgent is for personal, academic, or non-commercial purposes, you may use it under the terms of the MIT License.
+
+**MIT License**
+
+Copyright (c) 2026 PromptlyAgent AI
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+## Option 2: Commercial License (for Business and Commercial Use)
+
+If your use of PromptlyAgent is for business, commercial, or revenue-generating purposes, a commercial license is required. This includes, but is not limited to:
+
+*   Use by a for-profit entity.
+*   Integration into a product or service that is sold or offered for a fee.
+*   Use in a production environment for business operations.
+*   Any use that directly or indirectly generates revenue.
+
+To obtain a commercial license or for more information, please contact us at:
+
+**Email:** legal@promptlyagent.ai
+**Website:** https://promptlyagent.ai/licensing
+
+The terms of the commercial license will supersede the MIT License for commercial users.
+
+---
+
+## Defining "Commercial" and "Non-Commercial" Use
+
+### Non-Commercial Use:
+
+*   Personal hobby projects (not generating revenue).
+*   Academic research and education.
+*   Internal use within registered non-profit organizations (where the use of PromptlyAgent does not directly generate revenue for the organization).
+*   Open source projects that are not used in production for commercial purposes.
+
+### Commercial Use:
+
+*   Any use by a for-profit company or organization.
+*   Use in any product, service, or application that is sold, rented, leased, or otherwise offered for a fee.
+*   Use in a production environment for internal business operations of a for-profit entity.
+*   Any use that directly or indirectly generates revenue, including advertising-supported services.
+*   Use in consulting or service provision where PromptlyAgent is a material component of the service offering.
+
+**If you are unsure which license applies to your use case, please contact us for clarification at legal@promptlyagent.ai**
+
+---
+
+## Contributor License Agreement (CLA)
+
+By contributing to PromptlyAgent (including but not limited to submitting pull requests, issues with code suggestions, or any other form of code contribution), you agree that:
+
+1. You grant PromptlyAgent AI and its successors the irrevocable, worldwide, royalty-free, non-exclusive right to use, reproduce, modify, distribute, and sublicense your contributions under both the MIT License and any commercial licensing model.
+
+2. You represent that you have the legal right to grant the above license and that your contributions are your original work or you have obtained all necessary permissions.
+
+3. You understand that your contributions will be publicly available under the MIT License and may also be included in commercially licensed versions of PromptlyAgent.
+
+For questions about contributing or the CLA, please contact: legal@promptlyagent.ai
+
+---
+
+## Third-Party Software
+
+PromptlyAgent includes third-party open source software components. The licenses for these components are documented in the THIRD_PARTY_NOTICES.md file in this repository.
+
+---
+
+**Last Updated:** January 24, 2026

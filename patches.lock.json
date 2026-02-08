@@ -1,0 +1,17 @@
+{
+    "_hash": "04bd0f088e700f13caaed3f6488ad5c6aa5724b22831d722ca0592dee937bdfc",
+    "patches": {
+        "prism-php/relay": [
+            {
+                "package": "prism-php/relay",
+                "description": "0",
+                "url": "patches/prism-relay-named-arguments.patch",
+                "sha256": "97ae0f7ab0d3c2dacbbf029cb21f6b277eb8fac2dfaf885755f952b6957d220e",
+                "depth": 1,
+                "extra": {
+                    "provenance": "root"
+                }
+            }
+        ]
+    }
+}

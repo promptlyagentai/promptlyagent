@@ -1,0 +1,396 @@
+/**
+ * PromptlyAgent Application Styles
+ *
+ * Main stylesheet that orchestrates the application's theme system and component styles.
+ *
+ * Architecture Overview:
+ * 1. Import Tailwind CSS 4 (using @import, not @tailwind directives)
+ * 2. Import Flux UI component library
+ * 3. Import theme system (palette + semantic tokens)
+ * 4. Override Tailwind/Flux defaults with semantic tokens
+ * 5. Apply component-specific styling (navigation, forms, markdown)
+ * 6. Add utility classes (gradients, code blocks)
+ *
+ * Theme System:
+ * - palette-tropical-teal.css: Raw color values (50-950 scales)
+ * - _base-tokens.css: Semantic mappings (--color-accent, --color-surface, etc.)
+ * - Automatic light/dark mode switching via CSS custom properties
+ *
+ * To Switch Themes:
+ * Change the palette import below. Base tokens remain unchanged.
+ *
+ * @see resources/css/themes/palette-tropical-teal.css - Color definitions
+ * @see resources/css/themes/_base-tokens.css - Semantic token mappings
+ * @see docs/color-system.md - Complete theming documentation
+ */
+
+@import 'tailwindcss';
+@import '../../vendor/livewire/flux/dist/flux.css';
+
+/* stylelint-disable at-rule-no-unknown */
+
+/* ============================================
+   THEME SYSTEM IMPORTS
+   ============================================ */
+
+@import './themes/palette-tropical-teal.css';
+@import './themes/_base-tokens.css';
+
+/* ============================================
+   FLUX UI INTEGRATION
+   Map Flux's gray preferences to application grays
+   ============================================ */
+
+@theme {
+    --color-zinc-50: var(--color-gray-50);
+    --color-zinc-100: var(--color-gray-100);
+    --color-zinc-200: var(--color-gray-200);
+    --color-zinc-300: var(--color-gray-300);
+    --color-zinc-400: var(--color-gray-400);
+    --color-zinc-500: var(--color-gray-500);
+    --color-zinc-600: var(--color-gray-600);
+    --color-zinc-700: var(--color-gray-700);
+    --color-zinc-800: var(--color-gray-800);
+    --color-zinc-900: var(--color-gray-900);
+    --color-zinc-950: var(--color-gray-950);
+
+    /* ============================================
+       TAILWIND COLOR OVERRIDES
+       Map standard Tailwind colors to semantic palettes
+       This ensures all color utilities use theme-appropriate colors
+       ============================================ */
+
+    /* Red → Error palette (pink/magenta) */
+    --color-red-50: var(--palette-error-50);
+    --color-red-100: var(--palette-error-100);
+    --color-red-200: var(--palette-error-200);
+    --color-red-300: var(--palette-error-300);
+    --color-red-400: var(--palette-error-400);
+    --color-red-500: var(--palette-error-500);
+    --color-red-600: var(--palette-error-600);
+    --color-red-700: var(--palette-error-700);
+    --color-red-800: var(--palette-error-800);
+    --color-red-900: var(--palette-error-900);
+    --color-red-950: var(--palette-error-950);
+
+    /* Green → Success palette */
+    --color-green-50: var(--palette-success-50);
+    --color-green-100: var(--palette-success-100);
+    --color-green-200: var(--palette-success-200);
+    --color-green-300: var(--palette-success-300);
+    --color-green-400: var(--palette-success-400);
+    --color-green-500: var(--palette-success-500);
+    --color-green-600: var(--palette-success-600);
+    --color-green-700: var(--palette-success-700);
+    --color-green-800: var(--palette-success-800);
+    --color-green-900: var(--palette-success-900);
+    --color-green-950: var(--palette-success-950);
+
+    /* Emerald → Success palette (alternate green) */
+    --color-emerald-50: var(--palette-success-50);
+    --color-emerald-100: var(--palette-success-100);
+    --color-emerald-200: var(--palette-success-200);
+    --color-emerald-300: var(--palette-success-300);
+    --color-emerald-400: var(--palette-success-400);
+    --color-emerald-500: var(--palette-success-500);
+    --color-emerald-600: var(--palette-success-600);
+    --color-emerald-700: var(--palette-success-700);
+    --color-emerald-800: var(--palette-success-800);
+    --color-emerald-900: var(--palette-success-900);
+    --color-emerald-950: var(--palette-success-950);
+
+    /* Orange → Warning palette */
+    --color-orange-50: var(--palette-warning-50);
+    --color-orange-100: var(--palette-warning-100);
+    --color-orange-200: var(--palette-warning-200);
+    --color-orange-300: var(--palette-warning-300);
+    --color-orange-400: var(--palette-warning-400);
+    --color-orange-500: var(--palette-warning-500);
+    --color-orange-600: var(--palette-warning-600);
+    --color-orange-700: var(--palette-warning-700);
+    --color-orange-800: var(--palette-warning-800);
+    --color-orange-900: var(--palette-warning-900);
+    --color-orange-950: var(--palette-warning-950);
+
+    /* Amber → Warning palette */
+    --color-amber-50: var(--palette-warning-50);
+    --color-amber-100: var(--palette-warning-100);
+    --color-amber-200: var(--palette-warning-200);
+    --color-amber-300: var(--palette-warning-300);
+    --color-amber-400: var(--palette-warning-400);
+    --color-amber-500: var(--palette-warning-500);
+    --color-amber-600: var(--palette-warning-600);
+    --color-amber-700: var(--palette-warning-700);
+    --color-amber-800: var(--palette-warning-800);
+    --color-amber-900: var(--palette-warning-900);
+    --color-amber-950: var(--palette-warning-950);
+
+    /* Yellow → Warning palette */
+    --color-yellow-50: var(--palette-warning-50);
+    --color-yellow-100: var(--palette-warning-100);
+    --color-yellow-200: var(--palette-warning-200);
+    --color-yellow-300: var(--palette-warning-300);
+    --color-yellow-400: var(--palette-warning-400);
+    --color-yellow-500: var(--palette-warning-500);
+    --color-yellow-600: var(--palette-warning-600);
+    --color-yellow-700: var(--palette-warning-700);
+    --color-yellow-800: var(--palette-warning-800);
+    --color-yellow-900: var(--palette-warning-900);
+    --color-yellow-950: var(--palette-warning-950);
+
+    /* Teal → Primary palette */
+    --color-teal-50: var(--palette-primary-50);
+    --color-teal-100: var(--palette-primary-100);
+    --color-teal-200: var(--palette-primary-200);
+    --color-teal-300: var(--palette-primary-300);
+    --color-teal-400: var(--palette-primary-400);
+    --color-teal-500: var(--palette-primary-500);
+    --color-teal-600: var(--palette-primary-600);
+    --color-teal-700: var(--palette-primary-700);
+    --color-teal-800: var(--palette-primary-800);
+    --color-teal-900: var(--palette-primary-900);
+    --color-teal-950: var(--palette-primary-950);
+
+    /* Cyan → Primary palette */
+    --color-cyan-50: var(--palette-primary-50);
+    --color-cyan-100: var(--palette-primary-100);
+    --color-cyan-200: var(--palette-primary-200);
+    --color-cyan-300: var(--palette-primary-300);
+    --color-cyan-400: var(--palette-primary-400);
+    --color-cyan-500: var(--palette-primary-500);
+    --color-cyan-600: var(--palette-primary-600);
+    --color-cyan-700: var(--palette-primary-700);
+    --color-cyan-800: var(--palette-primary-800);
+    --color-cyan-900: var(--palette-primary-900);
+    --color-cyan-950: var(--palette-primary-950);
+
+    /* Blue → Notify palette (same as primary in tropical teal) */
+    --color-blue-50: var(--palette-notify-50);
+    --color-blue-100: var(--palette-notify-100);
+    --color-blue-200: var(--palette-notify-200);
+    --color-blue-300: var(--palette-notify-300);
+    --color-blue-400: var(--palette-notify-400);
+    --color-blue-500: var(--palette-notify-500);
+    --color-blue-600: var(--palette-notify-600);
+    --color-blue-700: var(--palette-notify-700);
+    --color-blue-800: var(--palette-notify-800);
+    --color-blue-900: var(--palette-notify-900);
+    --color-blue-950: var(--palette-notify-950);
+
+    /* Sky → Notify palette */
+    --color-sky-50: var(--palette-notify-50);
+    --color-sky-100: var(--palette-notify-100);
+    --color-sky-200: var(--palette-notify-200);
+    --color-sky-300: var(--palette-notify-300);
+    --color-sky-400: var(--palette-notify-400);
+    --color-sky-500: var(--palette-notify-500);
+    --color-sky-600: var(--palette-notify-600);
+    --color-sky-700: var(--palette-notify-700);
+    --color-sky-800: var(--palette-notify-800);
+    --color-sky-900: var(--palette-notify-900);
+    --color-sky-950: var(--palette-notify-950);
+
+    /* Keep tropical-teal available for gradual migration */
+    --color-tropical-teal-50: var(--palette-primary-50);
+    --color-tropical-teal-100: var(--palette-primary-100);
+    --color-tropical-teal-200: var(--palette-primary-200);
+    --color-tropical-teal-300: var(--palette-primary-300);
+    --color-tropical-teal-400: var(--palette-primary-400);
+    --color-tropical-teal-500: var(--palette-primary-500);
+    --color-tropical-teal-600: var(--palette-primary-600);
+    --color-tropical-teal-700: var(--palette-primary-700);
+    --color-tropical-teal-800: var(--palette-primary-800);
+    --color-tropical-teal-900: var(--palette-primary-900);
+    --color-tropical-teal-950: var(--palette-primary-950);
+}
+
+/* ============================================
+   BASE STYLES
+   Global defaults for all elements
+   ============================================ */
+
+@layer base {
+    /* Set default border color to semantic token for consistent theming */
+    *,
+    ::after,
+    ::before,
+    ::backdrop,
+    ::file-selector-button {
+        border-color: var(--color-border-default, currentColor);
+    }
+}
+
+/* ============================================
+   FLUX UI COMPONENT OVERRIDES
+   Ensure Flux components use semantic tokens
+   ============================================ */
+
+/* Field layout - grid with proper spacing */
+
+[data-flux-field]:not(ui-radio, ui-checkbox) {
+    @apply grid gap-2;
+}
+
+/* Label styling - tight spacing for compact forms */
+[data-flux-label] {
+    @apply mb-0 leading-tight;
+}
+
+/* Form control borders - use semantic tokens for consistent theming */
+input,
+textarea,
+select,
+button,
+[role="combobox"],
+[data-flux-control],
+[data-flux-input],
+[data-flux-select],
+[data-flux-textarea],
+[data-flux-dropdown],
+[data-flux-button] {
+    border-color: var(--color-border-default) !important;
+}
+
+/* Focus states - accent ring with offset for visibility */
+input:focus[data-flux-control],
+textarea:focus[data-flux-control],
+select:focus[data-flux-control] {
+    @apply outline-hidden ring-2 ring-accent ring-offset-2 ring-offset-accent-foreground;
+}
+
+/* ============================================
+   NAVIGATION COMPONENT STYLING
+   Sidebar and content area navigation states
+   ============================================ */
+
+@layer base {
+    /* Sidebar navigation - dark background with light text */
+    [data-flux-sidebar] [data-flux-navlist] [data-flux-navlist-item][aria-current="page"] {
+        background-color: var(--color-nav-sidebar-active) !important;
+        color: var(--color-sidebar-text) !important;
+    }
+
+    [data-flux-sidebar] [data-flux-navlist] [data-flux-navlist-item]:hover {
+        background-color: var(--color-nav-sidebar-hover) !important;
+        color: var(--color-sidebar-text) !important;
+    }
+
+    /* Content area navigation - light background in light mode, darker in dark mode */
+    [data-flux-navlist]:not([data-flux-sidebar] [data-flux-navlist]) [data-flux-navlist-item][aria-current="page"] {
+        background-color: var(--color-nav-content-active) !important;
+        font-weight: 500;
+    }
+
+    [data-flux-navlist]:not([data-flux-sidebar] [data-flux-navlist]) [data-flux-navlist-item]:hover {
+        background-color: var(--color-nav-content-hover) !important;
+    }
+
+    /* Profile component hover state in sidebar */
+    [data-flux-sidebar] [data-flux-profile]:hover {
+        background-color: var(--color-nav-sidebar-hover) !important;
+    }
+
+    /* Keep profile text light and readable on dark sidebar */
+    [data-flux-sidebar] [data-flux-profile] * {
+        color: var(--color-sidebar-text) !important;
+    }
+
+    /* Profile initials badge in sidebar - strong contrast */
+    [data-flux-sidebar] [data-flux-profile] [data-flux-avatar] {
+        background-color: var(--color-accent) !important;
+        color: var(--color-accent-foreground) !important;
+    }
+}
+
+/* ============================================
+   MARKDOWN STYLES
+   ============================================ */
+
+@import './markdown/markdown-styles.css';
+
+/* ============================================
+   GLOBAL CODE BLOCK STYLES (non-markdown)
+   ============================================ */
+
+/* Prism.js code blocks */
+pre[class*="language-"],
+pre code[class*="language-"] {
+    background-color: var(--color-code-bg) !important;
+    color: var(--color-text-primary) !important;
+}
+
+/* Highlight.js overrides - must come after hljs-custom-theme.css import */
+.hljs,
+code.hljs,
+pre.hljs,
+pre code.hljs,
+pre > code.hljs,
+pre:has(> code.hljs) {
+    background: var(--color-code-bg) !important;
+    background-color: var(--color-code-bg) !important;
+    color: var(--color-text-primary) !important;
+}
+
+/* Generic pre tags (JSON, plain text, etc.) - non-markdown code blocks */
+pre:not(.markdown pre) {
+    background-color: var(--color-code-bg);
+    color: var(--color-text-primary);
+    padding: 1rem;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+}
+
+/* ============================================
+   UTILITY CLASSES
+   Custom utilities for branding and effects
+   ============================================ */
+
+/* Gradient text effect for branding elements */
+.gradient-text {
+    background: linear-gradient(to right, var(--palette-primary-500), var(--palette-primary-300));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-fill-color: transparent;
+}
+
+.dark .gradient-text {
+    background: linear-gradient(to right, var(--palette-primary-500), var(--palette-primary-300));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-fill-color: transparent;
+}
+
+/* ============================================
+   PWA SWIPE GESTURE STYLES
+   Mobile-optimized swipe interactions for chat session management
+   ============================================ */
+
+/* Prevent text selection and callouts during swipe */
+.swipe-container {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    touch-action: pan-y; /* Allow vertical scroll, prevent horizontal scroll */
+}
+
+/* Smooth snap-back animation for incomplete swipes */
+.swipe-item-transition {
+    transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Swipe action reveal background with smooth opacity transition */
+.swipe-action-bg {
+    transition: opacity 150ms ease-out, background-color 150ms ease-out;
+}
+
+/* Touch device optimization - disable hover effects */
+@media (hover: none) and (pointer: coarse) {
+    /* Reduce hover opacity to improve swipe performance */
+    .hover\:bg-surface:hover {
+        background-color: transparent;
+    }
+}
+
+

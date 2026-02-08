@@ -1,0 +1,39 @@
+{
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build": "vite build",
+        "dev": "vite"
+    },
+    "dependencies": {
+        "@tiptap/core": "^3.1.0",
+        "@tiptap/pm": "^3.1.0",
+        "@tiptap/starter-kit": "^3.1.0",
+        "autoprefixer": "^10.4.20",
+        "axios": "^1.7.4",
+        "highlight.js": "^11.11.1",
+        "idb": "^8.0.3",
+        "laravel-vite-plugin": "^1.0",
+        "marked-highlight": "^2.2.2",
+        "vite": "^6.4.1",
+        "workbox-window": "^7.4.0"
+    },
+    "optionalDependencies": {
+        "@rollup/rollup-linux-x64-gnu": "4.9.5",
+        "@tailwindcss/oxide-linux-x64-gnu": "^4.0.1",
+        "lightningcss-linux-x64-gnu": "^1.29.1"
+    },
+    "devDependencies": {
+        "@hyvor/laravel-playwright": "^2.0.2",
+        "@playwright/test": "^1.54.2",
+        "@tailwindcss/forms": "^0.5.10",
+        "@tailwindcss/typography": "^0.5.16",
+        "@tailwindcss/vite": "^4.1.11",
+        "@vite-pwa/assets-generator": "^1.0.2",
+        "laravel-echo": "^2.1.6",
+        "marked": "^16.1.0",
+        "pusher-js": "^8.4.0",
+        "tailwindcss": "^4.1.11",
+        "vite-plugin-pwa": "^1.2.0"
+    }
+}

@@ -1,0 +1,53 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{times}
+\usepackage{geometry}
+\geometry{margin=1in}
+\usepackage{setspace}
+\doublespacing
+\usepackage{indentfirst}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\setkeys{Gin}{width=\linewidth,height=\textheight,keepaspectratio}
+\usepackage{amsmath}
+\usepackage{cite}
+
+% Pandoc tightlist fix
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue,
+    citecolor=blue,
+    pdfauthor={$author$},
+    pdftitle={$title$}
+}
+
+\title{$title$}
+\author{$author$}
+\date{$date$}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+$if(abstract)$
+$abstract$
+$else$
+No abstract provided.
+$endif$
+\end{abstract}
+
+$body$
+
+$if(bibliography)$
+\bibliographystyle{plain}
+\bibliography{$bibliography$}
+$endif$
+
+\end{document}

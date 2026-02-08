@@ -1,0 +1,140 @@
+/**
+ * Tropical Teal Color Palette
+ *
+ * This file defines the raw color values for the tropical-teal theme. All colors
+ * follow a consistent 50-950 scale from lightest to darkest, providing granular
+ * control over color variations across light and dark modes.
+ *
+ * Color Scales:
+ * - 50-100: Very light tints (backgrounds, subtle highlights)
+ * - 200-400: Light to medium tones (borders, hover states)
+ * - 500-600: Core brand colors (primary actions, accents)
+ * - 700-900: Dark tones (text, emphasis, dark mode backgrounds)
+ * - 950: Darkest shade (deep backgrounds, maximum contrast)
+ *
+ * Theme Switching:
+ * To create a new theme, duplicate this file and modify the color values while
+ * maintaining the same variable names. Then update the import in app.css.
+ *
+ * Palette Structure:
+ * - Neutral: Grays for text, backgrounds, borders
+ * - Primary: Tropical teal brand color
+ * - Success: Green for positive states
+ * - Warning: Red/coral for caution states
+ * - Error: Pink/magenta for error states
+ * - Notify: Teal (matches primary) for informational states
+ * - Special: Dark mode specific colors and utilities
+ *
+ * @see resources/css/themes/_base-tokens.css - Semantic token mappings
+ * @see resources/css/app.css - Theme import configuration
+ * @see docs/color-system.md - Complete color system documentation
+ */
+
+@theme {
+    /* ============================================
+       NEUTRAL PALETTE (Grays/Blacks/Whites)
+       Foundation colors for text, backgrounds, and surfaces
+       ============================================ */
+
+    --palette-neutral-50: #f9fafb;
+    --palette-neutral-100: #f3f4f6;
+    --palette-neutral-200: #e5e7eb;
+    --palette-neutral-300: #d1d5db;
+    --palette-neutral-400: #9ca3af;
+    --palette-neutral-500: #6b7280;
+    --palette-neutral-600: #4b5563;
+    --palette-neutral-700: #374151;
+    --palette-neutral-800: #1f2937;
+    --palette-neutral-900: #111827;
+    --palette-neutral-950: #030712;
+
+    /* ============================================
+       PRIMARY PALETTE (Tropical Teal)
+       Used for accents, links, primary actions
+       ============================================ */
+
+    --palette-primary-50: #f6fbfb;
+    --palette-primary-100: #e5f2f3;
+    --palette-primary-200: #d4e9eb;
+    --palette-primary-300: #badcde;
+    --palette-primary-400: #97cace;
+    --palette-primary-500: #52a7ad;
+    --palette-primary-600: #468e93;
+    --palette-primary-700: #356d70;
+    --palette-primary-800: #214345;
+    --palette-primary-900: #102123;
+    --palette-primary-950: #070d0e;
+
+    /* ============================================
+       STATE PALETTES
+       Success, Warning, Error, Notify states
+       ============================================ */
+
+    /* Success (Green) */
+    --palette-success-50: #fff4e7;
+    --palette-success-100: #f2eeda;
+    --palette-success-200: #c7e6bd;
+    --palette-success-300: #82e094;
+    --palette-success-400: #47cc74;
+    --palette-success-500: #00b85c;
+    --palette-success-600: #009c49;
+    --palette-success-700: #008038;
+    --palette-success-800: #00622f;
+    --palette-success-900: #00491f;
+    --palette-success-950: #002a0f;
+
+    /* Warning (Red/Coral) */
+    --palette-warning-50: #ffebe6;
+    --palette-warning-100: #ffddd8;
+    --palette-warning-200: #ffbbb7;
+    --palette-warning-300: #ff888a;
+    --palette-warning-400: #ff5d69;
+    --palette-warning-500: #ff384f;
+    --palette-warning-600: #dc253e;
+    --palette-warning-700: #b80d2e;
+    --palette-warning-800: #8b1d28;
+    --palette-warning-900: #6a0d19;
+    --palette-warning-950: #40040b;
+
+    /* Error (Pink/Magenta) */
+    --palette-error-50: #ffe8e9;
+    --palette-error-100: #ffd6df;
+    --palette-error-200: #ffa8c8;
+    --palette-error-300: #ff4aac;
+    --palette-error-400: #ff0092;
+    --palette-error-500: #ff007d;
+    --palette-error-600: #f40068;
+    --palette-error-700: #cc0053;
+    --palette-error-800: #9a0041;
+    --palette-error-900: #76002e;
+    --palette-error-950: #480019;
+
+    /* Notify (Teal - matches primary) */
+    --palette-notify-50: #f6fbfb;
+    --palette-notify-100: #e5f2f3;
+    --palette-notify-200: #d4e9eb;
+    --palette-notify-300: #badcde;
+    --palette-notify-400: #97cace;
+    --palette-notify-500: #52a7ad;
+    --palette-notify-600: #468e93;
+    --palette-notify-700: #356d70;
+    --palette-notify-800: #214345;
+    --palette-notify-900: #102123;
+    --palette-notify-950: #070d0e;
+
+    /* ============================================
+       SPECIAL COLORS
+       Dark mode specific and utility colors
+       ============================================ */
+
+    /* Dark mode page background - cool blue-tinted dark */
+    --palette-dark-page: #1d202a;
+
+    /* Dark mode surface colors (for contrast with page) */
+    --palette-dark-surface: #1d202a;
+    --palette-dark-surface-elevated: #252933;
+
+    /* Pure black and white */
+    --palette-white: #ffffff;
+    --palette-black: #000000;
+}

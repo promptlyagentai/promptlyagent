@@ -1,0 +1,39 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{geometry}
+\geometry{margin=1.2in}
+\usepackage{parskip}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\setkeys{Gin}{width=\linewidth,height=\textheight,keepaspectratio}
+\usepackage{xcolor}
+
+% Pandoc tightlist fix
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+
+\definecolor{titlecolor}{RGB}{0,51,102}
+\definecolor{linkcolor}{RGB}{0,102,204}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=linkcolor,
+    urlcolor=linkcolor,
+    pdfauthor={$author$},
+    pdftitle={$title$}
+}
+
+\title{\textcolor{titlecolor}{\textbf{$title$}}}
+\author{$author$}
+\date{$date$}
+
+\begin{document}
+
+\maketitle
+
+$body$
+
+\end{document}

@@ -1,0 +1,19 @@
+/* PromptlyAgent Custom Theme - Additional Overrides */
+:root {
+    --pa-bg-primary: #030712;
+    --pa-bg-secondary: #1a1a1a;
+    --pa-bg-elevated: #2d2d2d;
+    --pa-sidebar-bg: #030712;
+    --pa-text-primary: #ffffff;
+    --pa-text-secondary: #a3a3a3;
+    --pa-accent-cyan: #4a9199;
+    --pa-accent-cyan-hover: #5aa3ab;
+    --pa-accent-magenta: #ec4899;
+    --pa-accent-green: #22c55e;
+    --pa-accent-red: #ef4444;
+    --pa-border: #27272a;
+    --pa-code-bg: #030712;
+}
+
+/* Ensure text shadow is removed everywhere */
+* { text-shadow: none !important; }

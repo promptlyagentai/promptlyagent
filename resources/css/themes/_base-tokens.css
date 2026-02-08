@@ -1,0 +1,361 @@
+/**
+ * Base Semantic Tokens
+ *
+ * This file creates a semantic abstraction layer between raw palette colors and
+ * application usage. It maps meaningful names (like --color-accent, --color-surface-bg)
+ * to palette variables, enabling theme switching without changing component code.
+ *
+ * Architecture:
+ * - Light mode definitions (default @theme block)
+ * - Dark mode overrides (.dark class)
+ * - Tailwind utility class generation (@utility directives)
+ *
+ * Token Categories:
+ * - Page Structure: Backgrounds and text (2 tokens)
+ * - Surfaces: Cards, modals, panels (3 tokens)
+ * - Sidebar: Navigation area styling (3 tokens)
+ * - Navigation States: Active/hover indicators (4 tokens)
+ * - Text Hierarchy: Primary, secondary, tertiary (3 tokens)
+ * - Interactive: Accents, links, buttons (4 tokens)
+ * - Borders: Default and subtle variants (2 tokens)
+ * - Code & Markdown: Syntax highlighting support (4 tokens)
+ * - State Colors: Success, warning, error states (15 tokens)
+ *
+ * Total: 40 semantic tokens adapt across light/dark modes
+ *
+ * Theme-Agnostic Design:
+ * This file RARELY changes. When creating a new theme, only modify the palette
+ * file (e.g., palette-tropical-teal.css). Semantic tokens remain unchanged.
+ *
+ * Only edit this file when:
+ * - Adding new semantic categories
+ * - Adjusting dark mode mappings
+ * - Creating new utility classes
+ *
+ * @see resources/css/themes/palette-tropical-teal.css - Raw color values
+ * @see resources/css/app.css - Theme import and usage
+ * @see docs/color-system.md - Complete color system documentation
+ */
+
+@theme {
+    /* ============================================
+       TROPICAL TEAL COLOR SCALE
+       Exposes palette colors as Tailwind utilities (bg-tropical-teal-500, etc.)
+       ============================================ */
+
+    --color-tropical-teal-50: var(--palette-primary-50);
+    --color-tropical-teal-100: var(--palette-primary-100);
+    --color-tropical-teal-200: var(--palette-primary-200);
+    --color-tropical-teal-300: var(--palette-primary-300);
+    --color-tropical-teal-400: var(--palette-primary-400);
+    --color-tropical-teal-500: var(--palette-primary-500);
+    --color-tropical-teal-600: var(--palette-primary-600);
+    --color-tropical-teal-700: var(--palette-primary-700);
+    --color-tropical-teal-800: var(--palette-primary-800);
+    --color-tropical-teal-900: var(--palette-primary-900);
+    --color-tropical-teal-950: var(--palette-primary-950);
+
+    /* ============================================
+       PAGE STRUCTURE (2 tokens)
+       ============================================ */
+
+    --color-page-bg: var(--palette-primary-50);
+    --color-page-text: var(--palette-neutral-900);
+
+    /* ============================================
+       SURFACES (3 tokens)
+       Cards, panels, modals, etc.
+       ============================================ */
+
+    --color-surface-bg: #f5f5f5; /* Light gray surface */
+    --color-surface-bg-elevated: var(--palette-white);
+    --color-surface-border: var(--palette-neutral-200);
+
+    /* ============================================
+       SIDEBAR (3 tokens)
+       ============================================ */
+
+    --color-sidebar-bg: var(--palette-neutral-950);
+    --color-sidebar-text: var(--palette-neutral-100);
+    --color-sidebar-border: var(--palette-neutral-800);
+
+    /* ============================================
+       NAVIGATION STATES (4 tokens)
+       For sidebar and content area navigation
+       ============================================ */
+
+    --color-nav-sidebar-active: var(--palette-neutral-800);
+    --color-nav-sidebar-hover: var(--palette-neutral-900);
+    --color-nav-content-active: var(--palette-primary-100);
+    --color-nav-content-hover: var(--palette-primary-50);
+
+    /* ============================================
+       TEXT HIERARCHY (3 tokens)
+       ============================================ */
+
+    --color-text-primary: var(--palette-neutral-900);
+    --color-text-secondary: var(--palette-neutral-700);
+    --color-text-tertiary: var(--palette-neutral-600);
+
+    /* ============================================
+       INTERACTIVE ELEMENTS (4 tokens)
+       ============================================ */
+
+    --color-accent: var(--palette-primary-600);
+    --color-accent-hover: var(--palette-primary-700);
+    --color-accent-foreground: var(--palette-white);
+    --color-accent-content: var(--palette-primary-600); /* Flux UI compatibility */
+
+    /* ============================================
+       BORDERS (2 tokens)
+       ============================================ */
+
+    --color-border-default: var(--palette-primary-700);
+    --color-border-subtle: var(--palette-primary-600);
+
+    /* ============================================
+       CODE & MARKDOWN (4 tokens)
+       ============================================ */
+
+    --color-code-bg: var(--palette-neutral-100);
+    --color-code-text: var(--palette-error-600);
+    --color-code-border: var(--palette-neutral-200);
+    --color-markdown-marker: var(--palette-primary-600);
+
+    /* ============================================
+       STATE COLORS (15 tokens)
+       ============================================ */
+
+    --color-success: var(--palette-success-800);
+    --color-success-bg: var(--palette-success-100);
+    --color-success-contrast: var(--palette-neutral-900); /* Dark text on light bg */
+    --color-border-success: var(--palette-success-200);
+
+    --color-warning: var(--palette-warning-800);
+    --color-warning-bg: var(--palette-warning-100);
+    --color-warning-contrast: var(--palette-neutral-900); /* Dark text on light bg */
+    --color-border-warning: var(--palette-warning-200);
+
+    --color-error: var(--palette-error-800);
+    --color-error-bg: var(--palette-error-100);
+    --color-error-contrast: var(--palette-neutral-900); /* Dark text on light bg */
+    --color-border-error: var(--palette-error-200);
+}
+
+/* ============================================
+   DARK MODE OVERRIDES
+   ============================================ */
+
+@layer theme {
+    .dark {
+        /* Page Structure */
+        --color-page-bg: var(--palette-dark-page); /* #262626 - user requirement */
+        --color-page-text: var(--palette-neutral-100);
+
+        /* Surfaces - same as sidebar for consistency */
+        --color-surface-bg: var(--palette-neutral-950); /* Same as sidebar */
+        --color-surface-bg-elevated: var(--palette-dark-surface-elevated); /* #2d2d2d */
+        --color-surface-border: var(--palette-neutral-700);
+
+        /* Sidebar - darkest */
+        --color-sidebar-bg: var(--palette-neutral-950);
+        --color-sidebar-text: var(--palette-neutral-100);
+        --color-sidebar-border: var(--palette-neutral-800);
+
+        /* Navigation States - dark mode */
+        --color-nav-sidebar-active: var(--palette-neutral-800);
+        --color-nav-sidebar-hover: var(--palette-neutral-900);
+        --color-nav-content-active: var(--palette-primary-800);
+        --color-nav-content-hover: var(--palette-primary-900);
+
+        /* Text Hierarchy */
+        --color-text-primary: var(--palette-neutral-100);
+        --color-text-secondary: var(--palette-neutral-300);
+        --color-text-tertiary: var(--palette-neutral-400);
+
+        /* Interactive - slightly lighter/more vibrant in dark mode */
+        --color-accent: var(--palette-primary-500);
+        --color-accent-hover: var(--palette-primary-600);
+        --color-accent-foreground: var(--palette-white);
+        --color-accent-content: var(--palette-primary-400); /* Flux UI compatibility */
+
+        /* Borders */
+        --color-border-default: var(--palette-neutral-700);
+        --color-border-subtle: var(--palette-neutral-800);
+
+        /* Code & Markdown */
+        --color-code-bg: var(--palette-neutral-900);
+        --color-code-text: var(--palette-error-600);
+        --color-code-border: var(--palette-neutral-700);
+        --color-markdown-marker: var(--palette-primary-600);
+
+        /* State Colors - lighter for dark backgrounds */
+        --color-success: var(--palette-success-400);
+        --color-success-bg: var(--palette-success-900);
+        --color-success-contrast: var(--palette-white); /* White text on dark bg */
+        --color-border-success: var(--palette-success-700);
+
+        --color-warning: var(--palette-warning-400);
+        --color-warning-bg: var(--palette-warning-900);
+        --color-warning-contrast: var(--palette-white); /* White text on dark bg */
+        --color-border-warning: var(--palette-warning-700);
+
+        --color-error: var(--palette-error-400);
+        --color-error-bg: var(--palette-error-900);
+        --color-error-contrast: var(--palette-white); /* White text on dark bg */
+        --color-border-error: var(--palette-error-700);
+    }
+}
+
+/* ============================================
+   TAILWIND UTILITY CLASS GENERATION
+   ============================================ */
+
+/* Explicitly define utilities for semantic tokens */
+@utility bg-page {
+    background-color: var(--color-page-bg);
+}
+
+@utility text-page {
+    color: var(--color-page-text);
+}
+
+@utility bg-surface {
+    background-color: var(--color-surface-bg);
+}
+
+@utility bg-surface-elevated {
+    background-color: var(--color-surface-bg-elevated);
+}
+
+@utility border-surface {
+    border-color: var(--color-surface-border);
+}
+
+@utility bg-sidebar {
+    background-color: var(--color-sidebar-bg);
+}
+
+@utility text-sidebar {
+    color: var(--color-sidebar-text);
+}
+
+@utility border-sidebar {
+    border-color: var(--color-sidebar-border);
+}
+
+@utility bg-nav-sidebar-active {
+    background-color: var(--color-nav-sidebar-active);
+}
+
+@utility bg-nav-sidebar-hover {
+    background-color: var(--color-nav-sidebar-hover);
+}
+
+@utility bg-nav-content-active {
+    background-color: var(--color-nav-content-active);
+}
+
+@utility bg-nav-content-hover {
+    background-color: var(--color-nav-content-hover);
+}
+
+@utility text-primary {
+    color: var(--color-text-primary);
+}
+
+@utility text-secondary {
+    color: var(--color-text-secondary);
+}
+
+@utility text-tertiary {
+    color: var(--color-text-tertiary);
+}
+
+@utility bg-accent {
+    background-color: var(--color-accent);
+}
+
+@utility text-accent {
+    color: var(--color-accent);
+}
+
+@utility bg-accent-hover {
+    background-color: var(--color-accent-hover);
+}
+
+@utility text-accent-foreground {
+    color: var(--color-accent-foreground);
+}
+
+@utility border-default {
+    border-color: var(--color-border-default);
+}
+
+@utility border-subtle {
+    border-color: var(--color-border-subtle);
+}
+
+@utility bg-code {
+    background-color: var(--color-code-bg);
+}
+
+@utility text-code {
+    color: var(--color-code-text);
+}
+
+@utility border-code {
+    border-color: var(--color-code-border);
+}
+
+@utility text-markdown-marker {
+    color: var(--color-markdown-marker);
+}
+
+@utility text-success {
+    color: var(--color-success);
+}
+
+@utility bg-success {
+    background-color: var(--color-success-bg);
+}
+
+@utility text-warning {
+    color: var(--color-warning);
+}
+
+@utility bg-warning {
+    background-color: var(--color-warning-bg);
+}
+
+@utility text-error {
+    color: var(--color-error);
+}
+
+@utility bg-error {
+    background-color: var(--color-error-bg);
+}
+
+@utility border-success {
+    border-color: var(--color-border-success);
+}
+
+@utility border-warning {
+    border-color: var(--color-border-warning);
+}
+
+@utility border-error {
+    border-color: var(--color-border-error);
+}
+
+@utility text-success-contrast {
+    color: var(--color-success-contrast);
+}
+
+@utility text-warning-contrast {
+    color: var(--color-warning-contrast);
+}
+
+@utility text-error-contrast {
+    color: var(--color-error-contrast);
+}

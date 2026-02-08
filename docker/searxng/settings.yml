@@ -1,0 +1,92 @@
+# Searxng configuration for Laravel Sail
+use_default_settings:
+  engines:
+    remove:
+      - ahmia
+      - torch
+      - yacy
+      - yacy images
+
+general:
+  debug: false
+  instance_name: "PromptlyAgent Search"
+  privacypolicy_url: false
+  donation_url: false
+  contact_url: false
+  enable_stats: false
+
+
+search:
+  safe_search: 0
+  autocomplete: "google"
+  default_lang: "en"
+  formats:
+    - html
+    - json
+    - csv
+    - rss
+  default_doi_resolver: "sci-hub"
+
+server:
+  port: 8080
+  bind_address: "0.0.0.0"
+  secret_key: "promptlyagent_searxng_secret_key_2025"
+  limiter: false
+  public_instance: false
+  image_proxy: false
+  http_protocol_version: "1.1"
+  method_GET: true
+  method_POST: true
+
+
+
+ui:
+  static_use_hash: false
+  default_theme: simple
+  default_locale: en
+  theme_args:
+    simple_style: auto
+
+redis:
+  url: false
+
+outgoing:
+  request_timeout: 3.0
+  max_request_timeout: 15.0
+  useragent_suffix: ""
+  pool_connections: 50
+  pool_maxsize: 5
+  enable_http2: true
+
+engines:
+  # Override yandex to use ya shortcut (conflicts with default yacy)
+  - name: yandex
+    engine: yandex
+    shortcut: ya
+    weight: 2
+
+  # Boost our preferred engines
+  - name: duckduckgo
+    engine: duckduckgo
+    shortcut: ddg
+    weight: 2
+
+  - name: startpage
+    engine: startpage
+    shortcut: sp
+    weight: 2
+
+  - name: google
+    engine: google
+    shortcut: g
+    weight: 1
+
+  - name: bing
+    engine: bing
+    shortcut: bi
+    weight: 1
+
+  - name: yahoo
+    engine: yahoo
+    shortcut: yh
+    weight: 1

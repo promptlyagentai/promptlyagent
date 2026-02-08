@@ -1,0 +1,5 @@
+/* Hide empty example request/response sections in static docs */
+[id^="example-requests-"],
+[id^="example-responses-"] {
+    display: none !important;
+}

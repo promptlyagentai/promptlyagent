@@ -1,0 +1,15 @@
+{
+    "agents": [
+        "claude_code"
+    ],
+    "guidelines": true,
+    "herd_mcp": false,
+    "mcp": true,
+    "sail": true,
+    "skills": [
+        "fluxui-development",
+        "volt-development",
+        "pest-testing",
+        "tailwindcss-development"
+    ]
+}

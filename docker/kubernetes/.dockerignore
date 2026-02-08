@@ -1,0 +1,59 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# CI/CD
+.github
+.gitlab-ci.yml
+
+# Docker
+docker-compose.yml
+docker-compose.*.yml
+Dockerfile
+.dockerignore
+
+# Documentation
+*.md
+docs/
+PRPs/
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Laravel
+/node_modules
+/public/hot
+/public/storage
+/storage/*.key
+/vendor
+.env
+.env.backup
+.phpunit.result.cache
+npm-debug.log
+yarn-error.log
+
+# Tests
+/tests
+phpunit.xml
+.phpunit.cache
+
+# Development
+*.log
+.claude/
+
+# Kubernetes/Helm
+helm/
+k8s/
+kubernetes/
+
+# Plan files
+.claude/plans/

@@ -1,0 +1,94 @@
+/.phpunit.cache
+/node_modules
+/public/build
+/public/hot
+/public/storage
+/storage/*.key
+/storage/pail
+/storage/debugbar
+/vendor
+.env
+.env.backup
+.env.production
+.env.local
+.env.*.local
+!.env.example
+!.env.k8s.example
+.phpactor.json
+.phpunit.result.cache
+Homestead.json
+Homestead.yaml
+npm-debug.log
+yarn-error.log
+/auth.json
+/.fleet
+/.idea
+# Removed: .serena directory no longer used (replaced with Laravel Boost)
+/.nova
+/.vscode
+/.zed
+.aider*
+
+# OS-specific files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*~
+
+# IDE-specific temp files
+.history/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*.swn
+
+# Personal development configs
+.tmuxp.yml
+.tmux.conf
+
+# Python virtual environments and dependencies
+/scripts/trigger-api-client/venv/
+/scripts/trigger-api-client/.env
+/scripts/trigger-api-client/__pycache__/
+/scripts/trigger-api-client/*.pyc
+/examples/trigger-api-client/__pycache__/
+/examples/trigger-api-client/**/__pycache__/
+/examples/trigger-api-client/**/*.pyc
+.env.k8s
+
+# Docker overrides
+docker-compose.override.yml
+
+# Custom infrastructure Makefile (user-specific deployment configuration)
+/Makefile
+
+# Custom docs sync script (environment-specific paths)
+/scripts/sync-docs-to-repo.sh
+
+# Scribe API Documentation
+# Dynamic docs (deployment-specific, not committed)
+/.scribe/
+/.scribe-static/
+/resources/views/scribe/
+/resources/views/scribe-static/
+/public/vendor/scribe/
+/public/vendor/scribe-static/
+/storage/app/private/scribe/
+/storage/app/private/scribe-static/
+
+# Static docs export (temporary, synced to docs repo)
+/public/docs-export/
+
+# Claude Code internal workflow files (keep locally, don't commit)
+.claude/agents/
+.claude/commands/
+.claude/skills/
+.claude/hooks/
+.claude/*.json
+.claude/context_*.json
+.claude/prp_status.json
