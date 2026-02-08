@@ -6,6 +6,13 @@
 /storage/*.key
 /storage/pail
 /storage/debugbar
+/storage/framework/views/*.php
+/storage/framework/cache/*
+!/storage/framework/cache/.gitkeep
+/storage/framework/sessions/*
+!/storage/framework/sessions/.gitkeep
+/storage/logs/*
+!/storage/logs/.gitkeep
 /vendor
 .env
 .env.backup
@@ -63,6 +70,9 @@ Thumbs.db
 
 # Docker overrides
 docker-compose.override.yml
+
+# SearXNG auto-generated reference files
+docker/searxng/settings.yml.new
 
 # Custom infrastructure Makefile (user-specific deployment configuration)
 /Makefile
