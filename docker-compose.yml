@@ -310,6 +310,7 @@ services:
     reverb:
         image: 'promptlyagent/app:latest'
         pull_policy: never
+        container_name: promptlyagent-reverb-1
         extra_hosts:
             - 'host.docker.internal:host-gateway'
         ports:
@@ -317,6 +318,9 @@ services:
         environment:
             WWWUSER: '${WWWUSER}'
             LARAVEL_SAIL: 1
+            REVERB_APP_ID: '${REVERB_APP_ID}'
+            REVERB_APP_KEY: '${REVERB_APP_KEY}'
+            REVERB_APP_SECRET: '${REVERB_APP_SECRET}'
             REVERB_SERVER_HOST: '0.0.0.0'
             REVERB_SERVER_PORT: 8080
             REVERB_SERVER_PATH: '${REVERB_SERVER_PATH:-}'
@@ -326,7 +330,9 @@ services:
             - sail
         depends_on:
             - laravel.test
-        command: php artisan reverb:start
+        entrypoint: []
+        command: ['php', 'artisan', 'reverb:start', '--host=0.0.0.0', '--port=8080']
+        restart: unless-stopped
 
     horizon:
         image: 'promptlyagent/app:latest'
@@ -342,6 +348,7 @@ services:
             REVERB_APP_ID: '${REVERB_APP_ID}'
             REVERB_PORT: 8080
             REVERB_SCHEME: http
+        entrypoint: []
         command: ['php', 'artisan', 'horizon']
         volumes:
             - '.:/var/www/html'

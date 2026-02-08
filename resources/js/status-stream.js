@@ -549,13 +549,13 @@ class StatusStreamManager {
 
         // Ensure container is visible
         container.classList.remove('hidden');
-        
+
         // Hide progress-log completely - unified container handles all modes
         const progressLog = document.getElementById('progress-log');
         if (progressLog) {
             progressLog.classList.add('hidden');
         }
-        
+
         // Render the step (identical for all modes)
         this.renderTimelineStep(container, step);
         
@@ -615,16 +615,16 @@ class StatusStreamManager {
         if (document.getElementById(step.id)) {
             return;
         }
-        
+
         // Get or create our timeline container
         let timelineContainer = this.getOrCreateTimelineContainer(container);
-        
+
         // Create step element
         const stepElement = this.createStepElement(step);
-        
+
         // Add to timeline container
         timelineContainer.appendChild(stepElement);
-        
+
         // Ensure automatic scrolling to newest message
         this.scrollToNewest(container);
     }
