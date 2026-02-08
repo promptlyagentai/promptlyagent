@@ -7,9 +7,6 @@ WORKDIR /var/www/html
 # Copy composer files
 COPY composer.json composer.lock ./
 
-# Copy local packages (required for composer install)
-COPY packages/ ./packages/
-
 # Install PHP dependencies (production only)
 RUN composer install \
     --no-dev \
