@@ -170,9 +170,9 @@
             @endphp
 
             @if($widgetEnabled && $agentId)
-                <script src="https://cdn.jsdelivr.net/npm/marked@16.1.0/marked.min.js"></script>
+                <script src="https://cdn.jsdelivr.net/npm/marked@16.1.0/lib/marked.umd.min.js"></script>
                 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.11.1/styles/github.min.css">
-                <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.11.1/highlight.min.js"></script>
+                <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>
                 <script src="{{ asset('js/support-widget/bug-report-capture.js') }}"></script>
                 <script src="{{ asset('js/support-widget/promptly-support.js') }}"></script>
                 <script>

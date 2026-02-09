@@ -81,7 +81,7 @@ pre.mermaid[data-processed="true"] svg {
 </style>
 
 <!-- Marked.js Resources for Research Chat and Knowledge Previews -->
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@16.1.0/lib/marked.umd.min.js"></script>
 
 <!-- DOMPurify for XSS Protection in Markdown Rendering -->
 <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.9/dist/purify.min.js" crossorigin="anonymous"></script>

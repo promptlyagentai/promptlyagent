@@ -2570,7 +2570,7 @@
         initializeMarked() {
             if (!window.marked) {
                 this.error('marked.js not loaded - markdown rendering will use fallback! Make sure marked.js is loaded before promptly-support.js');
-                console.warn('PromptlySupport: Add <script src="https://cdn.jsdelivr.net/npm/marked@16.1.0/marked.min.js"></script> before the widget script');
+                console.warn('PromptlySupport: Add <script src="https://cdn.jsdelivr.net/npm/marked@16.1.0/lib/marked.umd.min.js"></script> before the widget script');
                 return;
             }
 

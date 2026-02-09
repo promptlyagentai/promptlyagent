@@ -282,7 +282,7 @@ class KnowledgeFileController extends Controller
     </div>
     
     <!-- Marked.js for markdown rendering -->
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked@16.1.0/lib/marked.umd.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const markdownContent = document.getElementById('markdown-content');
@@ -494,7 +494,7 @@ HTML;
     </div>
     
     <!-- Marked.js for markdown rendering -->
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked@16.1.0/lib/marked.umd.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const markdownContent = document.getElementById('markdown-content');
