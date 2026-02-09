@@ -166,7 +166,6 @@ class SearXNGTool
                             'q' => $optimizedQuery,
                             'format' => 'json',
                             'categories' => $category,
-                            'engines' => 'google,bing,duckduckgo,yahoo,startpage', // Extended engines for broader coverage
                             'time_range' => '',
                             'safesearch' => 1,
                             'pageno' => 1,
