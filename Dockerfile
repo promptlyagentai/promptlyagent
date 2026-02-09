@@ -59,10 +59,11 @@ RUN curl -sS https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor 
 # Enable PHP capabilities
 RUN setcap "cap_net_bind_service=+ep" /usr/bin/php8.4
 
-# Remove ubuntu user to avoid UID conflicts, then create sail user
+# Remove ubuntu user to avoid UID conflicts, then create sail user with UID 1000
+# Using UID 1000 to match Kubernetes securityContext and avoid permission issues
 RUN userdel -r ubuntu
 RUN groupadd --force -g $WWWGROUP sail
-RUN useradd -ms /bin/bash --no-user-group -g $WWWGROUP -u 1337 sail
+RUN useradd -ms /bin/bash --no-user-group -g $WWWGROUP -u 1000 sail
 RUN git config --global --add safe.directory /var/www/html
 
 # Stage 2: PromptlyAgent customizations
