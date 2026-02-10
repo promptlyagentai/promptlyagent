@@ -1008,6 +1008,25 @@
                             });
                         }
                     }
+                })
+                .listen('ResearchComplete', (e) => {
+                    console.log('ResearchComplete event received:', e);
+
+                    // Log via EventLogger
+                    if (window.eventLogger) {
+                        window.eventLogger.logEvent('ResearchComplete', answerChannelName, {
+                            ...e,
+                            source: 'backend_broadcast',
+                            receivedAt: new Date().toISOString()
+                        });
+                    }
+
+                    // Directly call the Livewire method
+                    @this.call('handleResearchComplete', {
+                        interactionId: e.interaction_id,
+                        executionId: e.execution_id,
+                        timestamp: e.timestamp
+                    });
                 });
 
             // Subscribe to source updates for Sources tab
@@ -1147,7 +1166,27 @@
                         });
                     }
 
-                    // Update the Steps tab with real-time status updates
+                    // Forward event to StatusStreamManager for timeline rendering
+                    if (window.statusStreamManager) {
+                        window.statusStreamManager.handleStatusStreamEvent(e);
+                    }
+
+                    // Handle completion events as fallback (in case ResearchComplete broadcast is delayed)
+                    const isCompletion =
+                        e.source === 'single_agent_completed' ||
+                        e.source === 'agent_execution_completed' ||
+                        (e.source === 'system' && e.message && e.message.toLowerCase().includes('execution completed'));
+
+                    if (isCompletion) {
+                        console.log('Agent completion detected, calling handleResearchComplete');
+                        @this.call('handleResearchComplete', {
+                            interactionId: interactionId,
+                            executionId: e.execution_id || null,
+                            timestamp: e.timestamp || new Date().toISOString()
+                        });
+                    }
+
+                    // Update the Steps tab with real-time status updates (legacy)
                     updateStatusDisplayDirectly(e, interactionId);
 
                     // Dispatch Livewire event for component-level handling
@@ -1462,14 +1501,11 @@
                         }
 
                         if (data.type === 'research_step') {
-                            // Show status updates via Alpine markdown renderer
-                            if (data.status) {
-                                let sourceElement = searchResults.querySelector('[x-ref="source"]');
-                                if (sourceElement) {
-                                    sourceElement.textContent = `_${data.status}_`;
-                                    sourceElement.dispatchEvent(new Event('input'));
-                                }
-                            }
+                            // Skip research_step status updates in directly mode
+                            // Status updates should only appear in Steps tab (via WebSocket StatusStreamManager)
+                            // This prevents status text from appearing in the answer area during streaming
+                            console.log('Skipping research_step status in directly mode:', data.status);
+                            // Don't update answer container with status messages
                         }
 
                         if (data.type === 'answer_stream') {

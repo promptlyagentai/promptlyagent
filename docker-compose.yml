@@ -17,12 +17,19 @@ services:
             WWWGROUP: '${WWWGROUP}'
             LARAVEL_SAIL: 1
             BROADCAST_CONNECTION: reverb
-            REVERB_HOST: "reverb"
+            # Internal broadcast settings (server-to-Reverb communication)
+            REVERB_BROADCAST_HOST: "reverb"
+            REVERB_BROADCAST_PORT: 8080
+            REVERB_BROADCAST_SCHEME: http
+            # Nginx proxy configuration
+            NGINX_REVERB_HOST: "reverb"
+            # Client connection settings (public-facing - used by config/reverb.php)
+            REVERB_HOST: '${REVERB_HOST}'
+            REVERB_PORT: '${REVERB_PORT}'
+            REVERB_SCHEME: '${REVERB_SCHEME}'
             REVERB_APP_KEY: '${REVERB_APP_KEY}'
             REVERB_APP_SECRET: '${REVERB_APP_SECRET}'
             REVERB_APP_ID: '${REVERB_APP_ID}'
-            REVERB_PORT: 8080
-            REVERB_SCHEME: http
             REVERB_SERVER_PATH: '${REVERB_SERVER_PATH:-}'
             XDEBUG_MODE: '${SAIL_XDEBUG_MODE:-off}'
             XDEBUG_CONFIG: '${SAIL_XDEBUG_CONFIG:-client_host=host.docker.internal}'
@@ -342,12 +349,14 @@ services:
             WWWUSER: '${WWWUSER}'
             LARAVEL_SAIL: 1
             BROADCAST_CONNECTION: reverb
-            REVERB_HOST: "reverb"
+            # Internal broadcast settings (server-to-Reverb communication)
+            REVERB_BROADCAST_HOST: "reverb"
+            REVERB_BROADCAST_PORT: 8080
+            REVERB_BROADCAST_SCHEME: http
+            # Client connection settings come from .env (public-facing)
             REVERB_APP_KEY: '${REVERB_APP_KEY}'
             REVERB_APP_SECRET: '${REVERB_APP_SECRET}'
             REVERB_APP_ID: '${REVERB_APP_ID}'
-            REVERB_PORT: 8080
-            REVERB_SCHEME: http
         entrypoint: []
         command: ['php', 'artisan', 'horizon']
         volumes:

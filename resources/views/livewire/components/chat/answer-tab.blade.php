@@ -59,12 +59,12 @@
 
                         </div>
                     </div>
-                    @if($interaction->answer && trim($interaction->answer) !== '')
+                    @if(($interaction->answer && trim($interaction->answer) !== '') || ($isStreaming && $currentInteractionId === $interaction->id && $selectedAgent === 'directly'))
                         <div class="flex justify-between items-end gap-4">
                             <div class="w-[80%] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg p-3">
                                 <div x-data="markdownRenderer()" class="text-primary  text-left"
                                      id="search-results-{{ $interaction->id }}">
-                                    <span x-ref="source" class="hidden">{{ $interaction->answer }}</span>
+                                    <span x-ref="source" class="hidden">{{ $interaction->answer ?? '' }}</span>
                                     <div x-ref="target" class="markdown" x-html="renderedHtml"></div>
                                 </div>
 

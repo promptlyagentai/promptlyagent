@@ -547,6 +547,12 @@ class StatusStreamManager {
         // No longer checking data-updating since we removed wire:stream from Answer tab
         // WebSocket processing handles all status updates exclusively
 
+        // Ensure parent container is visible (override Livewire inline style)
+        const parentContainer = container.parentElement;
+        if (parentContainer && (parentContainer.style.display === 'none' || parentContainer.style.display === '')) {
+            parentContainer.style.display = 'block';
+        }
+
         // Ensure container is visible
         container.classList.remove('hidden');
 

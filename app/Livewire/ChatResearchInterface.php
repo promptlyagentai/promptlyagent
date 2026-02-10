@@ -3250,7 +3250,7 @@ class ChatResearchInterface extends BaseChatInterface
         $this->refreshAllTabsData();
 
         // Dispatch UI event for any frontend JavaScript handlers
-        $this->dispatch('research-completed', [
+        $this->dispatch('research-complete', [
             'interaction_id' => $interactionId,
             'timestamp' => $data['timestamp'] ?? now()->toISOString(),
         ]);

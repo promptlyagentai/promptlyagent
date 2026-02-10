@@ -33,6 +33,7 @@ Route::get('dashboard/chat', \App\Livewire\ChatResearchInterface::class)
 
 Route::get('dashboard/chat/{sessionId}', \App\Livewire\ChatResearchInterface::class)
     ->middleware(['auth', 'verified'])
+    ->where('sessionId', '[0-9]+')
     ->name('dashboard.research-chat.session');
 
 Route::get('dashboard/agents', \App\Livewire\AgentManager::class)
