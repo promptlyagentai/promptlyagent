@@ -293,7 +293,7 @@ class AgentExecutor
 
 **Tailwind CSS:**
 - Use Tailwind utility classes
-- Follow the semantic color system (see `docs/color-system.md`)
+- Follow the semantic color system (see `docs/06-theming.md`)
 - Use dark mode variants where appropriate
 - Avoid custom CSS unless absolutely necessary
 
@@ -350,50 +350,9 @@ class DocumentProcessor
 
 ### Creating Agent Tools
 
-Tools extend agent capabilities. Place in `app/Services/Agents/Tools/`:
+Tools extend agent capabilities. Place in `app/Tools/` directory.
 
-```php
-<?php
-
-namespace App\Services\Agents\Tools;
-
-use EchoLabs\Prism\Tool;
-use EchoLabs\Prism\ValueObjects\{ToolCall, ToolResult};
-
-class CustomTool extends Tool
-{
-    public function name(): string
-    {
-        return 'tool_name';
-    }
-
-    public function description(): string
-    {
-        return 'Clear description for AI to understand when to use this tool';
-    }
-
-    public function parameters(): array
-    {
-        return [
-            'param_name' => [
-                'type' => 'string',
-                'description' => 'Parameter description',
-                'required' => true,
-            ],
-        ];
-    }
-
-    public function handle(ToolCall $toolCall): ToolResult
-    {
-        try {
-            $result = $this->executeToolLogic($toolCall->arguments());
-            return ToolResult::text($result);
-        } catch (\Exception $e) {
-            return ToolResult::error($e->getMessage());
-        }
-    }
-}
-```
+For complete tool development patterns and examples, see **[CLAUDE.md](CLAUDE.md)** - "Prism Tool Pattern" section.
 
 ### Package Development
 
@@ -401,7 +360,7 @@ For integrations, use the self-registering package system:
 
 1. Create in `packages/your-integration/`
 2. Follow the structure of existing packages (notion, slack)
-3. See `docs/package-development-guide.md` for complete tutorial
+3. See `docs/07-package-development.md` for complete tutorial
 
 ---
 
@@ -436,8 +395,11 @@ For integrations, use the self-registering package system:
 # Rollback last migration
 ./vendor/bin/sail artisan migrate:rollback
 
-# Fresh start with seed data
-./vendor/bin/sail artisan migrate:fresh --seed
+# Fresh migration (⚠️ destroys data)
+./vendor/bin/sail artisan migrate:fresh
+
+# Seed database with demo data
+./vendor/bin/sail artisan db:seed
 ```
 
 ### Queue Management
@@ -521,9 +483,14 @@ Execution times out with error: "Maximum execution time exceeded"
 
 - **[README.md](README.md)** - Project overview and quick start
 - **[CLAUDE.md](CLAUDE.md)** - AI assistant development guidelines
-- **[docs/color-system.md](docs/color-system.md)** - Theme customization
-- **[docs/package-development-guide.md](docs/package-development-guide.md)** - Create integrations
-- **[database/MIGRATION_HISTORY.md](database/MIGRATION_HISTORY.md)** - Database schema
+- **[docs/06-theming.md](docs/06-theming.md)** - Theme customization
+- **[docs/07-package-development.md](docs/07-package-development.md)** - Create integrations
+
+### Community Resources
+
+- **[Community](https://promptlyagent.ai/community)** - Browse extensions, contribute integrations, see showcase projects
+- **[Roadmap](https://promptlyagent.ai/roadmap)** - View upcoming features and suggest improvements
+- **[Documentation](https://promptlyagent.ai/docs/index.html)** - Basic guides and API documentation
 
 ### Learning Resources
 
@@ -534,7 +501,7 @@ Execution times out with error: "Maximum execution time exceeded"
 - [Pest Documentation](https://pestphp.com/docs)
 - [Tailwind CSS Documentation](https://tailwindcss.com/docs)
 
-### Community
+### Contact
 
 - **Email**: security@promptlyagent.ai (security issues)
 - **Email**: legal@promptlyagent.ai (licensing questions)

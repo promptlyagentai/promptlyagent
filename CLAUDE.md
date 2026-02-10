@@ -28,11 +28,11 @@
 ./vendor/bin/sail artisan test tests/Feature/Agents/
 
 # Code formatting (REQUIRED before commits)
-./vendor/bin/pint
+./vendor/bin/sail pint
 
 # Database
 ./vendor/bin/sail artisan migrate
-./vendor/bin/sail artisan migrate:fresh --seed
+./vendor/bin/sail artisan db:seed
 
 # Queues (Horizon)
 ./vendor/bin/sail artisan horizon:status
@@ -62,6 +62,10 @@ mcp__laravel-boost__tinker "Agent::with('tools')->find(1)"
 - ✅ Debugging (query database, execute code)
 - ✅ Understanding relationships and schemas
 - ✅ Finding version-specific examples
+
+**Domain-Specific Skills:**
+- Laravel Boost provides skills for common development tasks (see "Skills Activation" section below)
+- **[Full Boost Documentation](https://laravel.com/docs/12.x/boost)** - Complete guide to all Laravel Boost features
 
 ---
 
@@ -116,8 +120,7 @@ app/
 └── Jobs/                    # Queued background jobs
 
 database/
-├── migrations/              # 67 consolidated migrations (2025-07-01)
-└── migrations_archived_20260101/  # Historical reference
+└── migrations/              # Database schema migrations
 
 resources/
 ├── views/livewire/          # Livewire component views
@@ -173,34 +176,48 @@ OutputAction → User, Agent (M2M), OutputActionLog (many)
 
 ### Prism Tool Pattern
 ```php
-namespace App\Services\Agents\Tools;
+namespace App\Tools;
 
-use EchoLabs\Prism\Tool;
-use EchoLabs\Prism\ValueObjects\{ToolCall, ToolResult};
+use Prism\Prism\Facades\Tool;
+use Prism\Prism\Schema\StringSchema;
+use App\Tools\Concerns\SafeJsonResponse;
 
-class CustomTool extends Tool
+/**
+ * CustomTool - Clear description for AI to understand when to use this tool.
+ *
+ * Detailed documentation about what this tool does,
+ * when to use it, and any important considerations.
+ */
+class CustomTool
 {
-    public function name(): string { return 'custom_tool'; }
+    use SafeJsonResponse;
 
-    public function description(): string {
-        return 'Clear description for AI to understand when to use';
+    public static function register(): void
+    {
+        Tool::as('custom_tool')
+            ->for('anthropic')
+            ->withDescription('Clear description for AI to understand when to use')
+            ->withStringParameter('query', 'Query parameter description')
+            ->using(function (string $query): string {
+                try {
+                    // Your tool logic here
+                    $result = self::executeLogic($query);
+                    return json_encode(['result' => $result]);
+                } catch (\Exception $e) {
+                    return json_encode(['error' => $e->getMessage()]);
+                }
+            });
     }
 
-    public function parameters(): array {
-        return [
-            'query' => ['type' => 'string', 'description' => '...', 'required' => true],
-        ];
-    }
-
-    public function handle(ToolCall $toolCall): ToolResult {
-        try {
-            return ToolResult::text($this->executeLogic($toolCall->arguments()));
-        } catch (\Exception $e) {
-            return ToolResult::error($e->getMessage());
-        }
+    private static function executeLogic(string $query): string
+    {
+        // Implementation details
+        return 'result';
     }
 }
 ```
+
+**Reference:** See `app/Tools/KnowledgeRAGTool.php` for a production example.
 
 ---
 
@@ -225,7 +242,7 @@ class CustomTool extends Tool
 1. **Search docs:** `mcp__laravel-boost__search-docs ["topic"]`
 2. **Read sibling files** for patterns
 3. Make changes following existing conventions
-4. **Format code:** `./vendor/bin/pint` (REQUIRED)
+4. **Format code:** `./vendor/bin/sail pint` (REQUIRED)
 5. Commit (hooks validate)
 
 ### Creating New Resources
@@ -290,9 +307,10 @@ mcp__laravel-boost__search-docs ["Meilisearch", "RAG"]
 - **`prism-relay-named-arguments.patch`** - Fixes MCP tool named argument handling in prism-php/relay
 - Applied via `cweagans/composer-patches` during `composer install`
 
-### Other Resources
-- `database/MIGRATION_HISTORY.md` - Migration timeline
-- `packages/README.md` - Package development overview
+### Community Resources
+- **[Community](https://promptlyagent.ai/community)** - Browse extensions and integration examples
+- **[Online Documentation](https://promptlyagent.ai/docs/index.html)** - Basic guides and API documentation
+- **[Roadmap](https://promptlyagent.ai/roadmap)** - Upcoming features and project direction
 
 ### Custom Agents (`.claude/agents/`)
 **Note:** Laravel Boost skills handle most code review and development patterns. Custom agents provide specialized functionality not covered by Boost.
@@ -307,11 +325,6 @@ mcp__laravel-boost__search-docs ["Meilisearch", "RAG"]
   - Use for: Documenting API endpoints, improving Scribe annotations
   - Provides: @group, @bodyParam, @responseField guidance, OpenAPI/Postman integration
   - Knows PromptlyAgent API patterns (Agent, Knowledge, Chat APIs)
-
-**Removed Agents (2025-02-05):**
-- ~~`css-code-review.md`~~ - Replaced by `tailwindcss-development` Boost skill
-- ~~`js-livewire-alpine-code-review.md`~~ - Replaced by `volt-development` Boost skill
-- ~~`laravel-code-review.md`~~ - Replaced by core Laravel Boost guidelines
 
 ---
 
@@ -384,10 +397,19 @@ This application is a Laravel application and its main Laravel ecosystems packag
 
 This project has domain-specific skills available. You MUST activate the relevant skill whenever you work in that domain—don't wait until you're stuck.
 
-- `fluxui-development` — Develops UIs with Flux UI Free components. Activates when creating buttons, forms, modals, inputs, dropdowns, checkboxes, or UI components; replacing HTML form elements with Flux; working with flux: components; or when the user mentions Flux, component library, UI components, form fields, or asks about available Flux components.
-- `volt-development` — Develops single-file Livewire components with Volt. Activates when creating Volt components, converting Livewire to Volt, working with @volt directive, functional or class-based Volt APIs; or when the user mentions Volt, single-file components, functional Livewire, or inline component logic in Blade files.
-- `pest-testing` — Tests applications using the Pest 3 PHP framework. Activates when writing tests, creating unit or feature tests, adding assertions, testing Livewire components, architecture testing, debugging test failures, working with datasets or mocking; or when the user mentions test, spec, TDD, expects, assertion, coverage, or needs to verify functionality works.
-- `tailwindcss-development` — Styles applications using Tailwind CSS v4 utilities. Activates when adding styles, restyling components, working with gradients, spacing, layout, flex, grid, responsive design, dark mode, colors, typography, or borders; or when the user mentions CSS, styling, classes, Tailwind, restyle, hero section, cards, buttons, or any visual/UI changes.
+**📚 Learn More:**
+- **[Laravel Boost Documentation](https://laravel.com/docs/12.x/boost)** - Complete guide to Laravel Boost and skills
+- **Local Skills:** See `.claude/skills/` directory for skill definitions
+
+**Available Skills:**
+
+- **`fluxui-development`** — Develops UIs with Flux UI Free components. Activates when creating buttons, forms, modals, inputs, dropdowns, checkboxes, or UI components; replacing HTML form elements with Flux; working with flux: components; or when the user mentions Flux, component library, UI components, form fields, or asks about available Flux components.
+
+- **`volt-development`** — Develops single-file Livewire components with Volt. Activates when creating Volt components, converting Livewire to Volt, working with @volt directive, functional or class-based Volt APIs; or when the user mentions Volt, single-file components, functional Livewire, or inline component logic in Blade files.
+
+- **`pest-testing`** — Tests applications using the Pest 3 PHP framework. Activates when writing tests, creating unit or feature tests, adding assertions, testing Livewire components, architecture testing, debugging test failures, working with datasets or mocking; or when the user mentions test, spec, TDD, expects, assertion, coverage, or needs to verify functionality works.
+
+- **`tailwindcss-development`** — Styles applications using Tailwind CSS v4 utilities. Activates when adding styles, restyling components, working with gradients, spacing, layout, flex, grid, responsive design, dark mode, colors, typography, or borders; or when the user mentions CSS, styling, classes, Tailwind, restyle, hero section, cards, buttons, or any visual/UI changes.
 
 ## Conventions
 
@@ -613,8 +635,8 @@ protected function isAccessible(User $user, ?string $path = null): bool
 
 # Laravel Pint Code Formatter
 
-- You must run `vendor/bin/sail bin pint --dirty --format agent` before finalizing changes to ensure your code matches the project's expected style.
-- Do not run `vendor/bin/sail bin pint --test --format agent`, simply run `vendor/bin/sail bin pint --format agent` to fix any formatting issues.
+- You must run `./vendor/bin/sail pint` before finalizing changes to ensure your code matches the project's expected style.
+- Do not use `--test` flag, simply run `./vendor/bin/sail pint` to fix any formatting issues.
 
 === pest/core rules ===
 

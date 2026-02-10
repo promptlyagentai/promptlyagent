@@ -214,7 +214,7 @@ All commands use Laravel Sail (Docker):
 
 # Database operations
 ./vendor/bin/sail artisan migrate                    # Run migrations
-./vendor/bin/sail artisan migrate:fresh --seed       # Fresh start with demo data
+./vendor/bin/sail artisan db:seed                    # Seed database with demo data
 ./vendor/bin/sail artisan tinker                     # Interactive console
 
 # Log viewing
@@ -237,9 +237,8 @@ promptlyagent/
 │   ├── migrations/            # Database schema (consolidated migrations)
 │   └── seeders/               # Database seeders
 ├── docs/
-│   ├── color-system.md        # Theme & color documentation
-│   ├── package-development-guide.md  # Integration development
-│   └── package-quick-reference.md    # Quick scaffolding reference
+│   ├── 06-theming.md          # Theme & color documentation
+│   └── 07-package-development.md  # Integration development
 ├── patches/                   # Vendor package fixes
 ├── resources/
 │   ├── views/                 # Blade templates
@@ -345,9 +344,7 @@ PromptlyAgent is built as an **extensible framework** using a self-registering p
 - **schedule-integration**: Scheduled task input triggers
 
 **Complete guides**:
-- `docs/package-development-guide.md` - Comprehensive tutorial with examples
-- `docs/package-quick-reference.md` - Quick scaffolding reference
-- `packages/*/` - Working production examples
+- `docs/07-package-development.md` - Comprehensive tutorial with examples
 
 ### Creating Custom Agent Tools
 
@@ -358,46 +355,32 @@ Tools extend agent capabilities. Example tool:
 
 namespace App\Tools;
 
-use EchoLabs\Prism\Tool;
-use EchoLabs\Prism\ValueObjects\ToolCall;
-use EchoLabs\Prism\ValueObjects\ToolResult;
+use Prism\Prism\Facades\Tool;
 
-class WeatherTool extends Tool
+class WeatherTool
 {
-    public function name(): string
+    public static function register(): void
     {
-        return 'get_weather';
+        Tool::as('get_weather')
+            ->for('anthropic')
+            ->withDescription('Get current weather for a location')
+            ->withStringParameter('location', 'City name or coordinates')
+            ->using(function (string $location): string {
+                // Your tool logic here
+                $weather = self::fetchWeather($location);
+                return json_encode(['weather' => $weather]);
+            });
     }
 
-    public function description(): string
+    private static function fetchWeather(string $location): string
     {
-        return 'Get current weather for a location';
-    }
-
-    public function parameters(): array
-    {
-        return [
-            'location' => [
-                'type' => 'string',
-                'description' => 'City name or coordinates',
-                'required' => true,
-            ],
-        ];
-    }
-
-    public function handle(ToolCall $toolCall): ToolResult
-    {
-        $location = $toolCall->arguments()['location'];
-
-        // Your tool logic here
-        $weather = $this->fetchWeather($location);
-
-        return ToolResult::text($weather);
+        // Implementation
+        return "Sunny, 72°F";
     }
 }
 ```
 
-Register in `AgentToolRegistry` or package service provider.
+See CLAUDE.md for complete tool development patterns.
 
 ### Custom Themes
 
@@ -408,7 +391,7 @@ The color system supports custom themes:
 3. **Import in** `resources/css/app.css`
 4. **Rebuild CSS** with `./vendor/bin/sail npm run build`
 
-See `docs/color-system.md` for complete documentation.
+See `docs/06-theming.md` for complete documentation.
 
 ---
 
@@ -419,14 +402,24 @@ See `docs/color-system.md` for complete documentation.
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** - Contribution guidelines and workflow
 
 ### Development Guides
-- **[Color System](docs/color-system.md)** - Theme customization and semantic tokens
-- **[Package Development Guide](docs/package-development-guide.md)** - Create custom integrations
-- **[Package Quick Reference](docs/package-quick-reference.md)** - Fast scaffolding reference
+- **[Theming System](docs/06-theming.md)** - Theme customization and semantic tokens
+- **[Package Development Guide](docs/07-package-development.md)** - Create custom integrations
 - **[CLAUDE.md](CLAUDE.md)** - AI assistant development guidelines
 
 ### Reference
-- **[Migration History](database/MIGRATION_HISTORY.md)** - Complete database schema documentation
 - **[API Documentation](http://localhost/docs)** - Interactive API docs (after installation)
+
+---
+
+## 🌍 Community & Resources
+
+Explore the broader PromptlyAgent ecosystem:
+
+- **[Community](https://promptlyagent.ai/community)** - Browse extensions, share integrations, and see what others are building
+- **[Documentation](https://promptlyagent.ai/docs/index.html)** - Basic setup guides and API documentation
+- **[Roadmap](https://promptlyagent.ai/roadmap)** - Upcoming features and project direction
+
+For detailed development documentation, see the `docs/` directory in this repository.
 
 ---
 

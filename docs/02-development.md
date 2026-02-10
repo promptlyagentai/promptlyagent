@@ -193,7 +193,8 @@ Create migrations for schema changes:
 ./vendor/bin/sail artisan migrate:rollback
 
 # Fresh migration (⚠️ destroys data)
-./vendor/bin/sail artisan migrate:fresh --seed
+./vendor/bin/sail artisan migrate:fresh
+./vendor/bin/sail artisan db:seed
 ```
 
 ### 6. Update Documentation
