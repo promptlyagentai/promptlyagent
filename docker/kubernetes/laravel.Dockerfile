@@ -1,6 +1,7 @@
 # Multi-stage Laravel production Dockerfile for Kubernetes
 # Stage 1: Builder - Install dependencies and build assets
-FROM promptlyagent/app:latest AS builder
+ARG REGISTRY=registry.local:5000
+FROM ${REGISTRY}/promptlyagent/app:latest AS builder
 
 WORKDIR /var/www/html
 
@@ -64,7 +65,8 @@ RUN php artisan view:cache || true
 # Worker pods use environment variables directly (no config cache needed).
 
 # Stage 2: Runtime - Minimal production image
-FROM promptlyagent/app:latest
+ARG REGISTRY=registry.local:5000
+FROM ${REGISTRY}/promptlyagent/app:latest
 
 ARG WWWGROUP=1000
 
@@ -148,7 +150,8 @@ RUN apt-get update && apt-get install -y python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy application from builder (ownership already set by --chown flag)
-COPY --from=builder --chown=sail:sail /var/www/html /var/www/html
+# Use --chmod to set permissions during COPY (much faster than post-copy find)
+COPY --from=builder --chown=sail:sail --chmod=755 /var/www/html /var/www/html
 
 # Clear any config cache from builder stage (it won't have runtime environment variables)
 # Config cache must be regenerated at runtime with proper env vars
@@ -164,21 +167,24 @@ COPY docker/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY docker/startup/start-supervisor.sh /usr/local/bin/start-supervisor.sh
 RUN chmod +x /usr/local/bin/start-supervisor.sh
 
-# Set proper permissions only for files that don't already have correct permissions
-# This is much faster than changing all files
-# Directories: only change if not already 755
-# Files: only change if not already 644
-# Exclude storage and bootstrap/cache from permissions changes (they need 775)
-RUN find /var/www/html -type d -not -path "*/storage/*" -not -path "*/bootstrap/cache*" ! -perm 755 -exec chmod 755 {} + \
-    && find /var/www/html -type f -not -path "*/storage/*" -not -path "*/bootstrap/cache*" ! -perm 644 -exec chmod 644 {} +
+# Fix file permissions (files should be 644, not 755)
+# Only target specific directories where this matters most
+# Use single find with -o (OR) for better performance
+RUN find /var/www/html -type f \( \
+        -path "*/app/*" -o \
+        -path "*/config/*" -o \
+        -path "*/database/*" -o \
+        -path "*/routes/*" -o \
+        -path "*/resources/*" \
+    \) ! -perm 644 -exec chmod 644 {} + 2>/dev/null || true
 
 # Create required directories and set special permissions for writable directories
+# Ownership already correct from COPY --chown, just fix permissions
 RUN mkdir -p /var/www/html/storage/logs \
     /var/www/html/storage/framework/cache/data \
     /var/www/html/storage/framework/sessions \
     /var/www/html/storage/framework/views \
     /var/www/html/bootstrap/cache \
-    && chown -R sail:sail /var/www/html/storage /var/www/html/bootstrap/cache \
     && chmod -R 775 /var/www/html/storage \
     && chmod -R 775 /var/www/html/bootstrap/cache
 
