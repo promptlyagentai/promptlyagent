@@ -205,6 +205,30 @@
 
     <!-- Artifact Drawer Component -->
     @livewire('components.artifact-drawer')
+
+    <!-- Blocking Execution Cancellation Modal -->
+    <flux:modal name="cancel-blocking-execution" class="min-w-[32rem]" wire:model="showCancelModal">
+        <div class="space-y-6">
+            <div>
+                <flux:heading size="lg">Cancel Blocking Execution?</flux:heading>
+                <flux:text class="mt-2" id="cancel-modal-description">
+                    <!-- Description will be populated dynamically -->
+                </flux:text>
+            </div>
+            <div class="flex gap-2">
+                <flux:spacer />
+                <flux:modal.close>
+                    <flux:button variant="ghost">Cancel</flux:button>
+                </flux:modal.close>
+                <flux:button
+                    type="button"
+                    variant="danger"
+                    x-on:click="$wire.cancelExecution(window.blockingExecutionData?.id || 0); $wire.showCancelModal = false;">
+                    Cancel Execution
+                </flux:button>
+            </div>
+        </div>
+    </flux:modal>
 </div>
 
     @push('styles')
@@ -699,19 +723,13 @@
                 }
             } else if (source === 'single_agent_completed') {
                 // Handle single agent execution completion
-                console.log('Single agent execution completed, triggering UI refresh');
-                
-                // Trigger Livewire to refresh the interaction and show results
-                const component = Livewire.find(document.querySelector('[wire\\:id]').getAttribute('wire:id'));
-                if (component) {
-                    console.log('Calling loadInteractions to refresh with completed results');
-                    component.call('loadInteractions');
-                    
-                    // Stop streaming state
-                    component.set('isStreaming', false);
-                    component.set('isThinking', false);
-                }
-                
+                console.log('Single agent execution completed - workflow continues');
+
+                // Note: Do NOT refresh interactions or stop streaming state here
+                // In workflow mode, other agents may still be running
+                // The final completion event (ResearchComplete or HolisticWorkflowCompleted)
+                // will handle the interaction reload and state updates
+
                 return {
                     type: 'completion',
                     tool: 'single_agent',
@@ -961,7 +979,49 @@
             // Subscribe to chat interaction updates for Answers tab
             const answerChannelName = `chat-interaction.${interactionId}`;
             console.log('Subscribing to chat interaction channel:', answerChannelName);
-            
+
+            // Define event handlers once to avoid duplication (matching StatusStreamCreated pattern)
+            const handleResearchCompleteEvent = (e) => {
+                console.log('ResearchComplete event received:', e);
+
+                // Log via EventLogger
+                if (window.eventLogger) {
+                    window.eventLogger.logEvent('ResearchComplete', answerChannelName, {
+                        ...e,
+                        source: 'backend_broadcast',
+                        receivedAt: new Date().toISOString()
+                    });
+                }
+
+                // Directly call the Livewire method
+                @this.call('handleResearchComplete', {
+                    interactionId: e.interaction_id,
+                    executionId: e.execution_id,
+                    timestamp: e.timestamp
+                });
+            };
+
+            const handleHolisticWorkflowCompletedEvent = (e) => {
+                console.log('HolisticWorkflowCompleted event received:', e);
+
+                // Log via EventLogger
+                if (window.eventLogger) {
+                    window.eventLogger.logEvent('HolisticWorkflowCompleted', answerChannelName, {
+                        ...e,
+                        source: 'backend_broadcast',
+                        receivedAt: new Date().toISOString()
+                    });
+                }
+
+                // Call the same handler as ResearchComplete
+                // The interaction answer has already been written to the database
+                @this.call('handleResearchComplete', {
+                    interactionId: e.interaction_id,
+                    executionId: e.execution_id,
+                    timestamp: e.timestamp
+                });
+            };
+
             window.Echo.channel(answerChannelName)
                 .listen('ChatInteractionUpdated', (e) => {
                     console.log('ChatInteractionUpdated event received:', e);
@@ -1009,25 +1069,18 @@
                         }
                     }
                 })
-                .listen('ResearchComplete', (e) => {
-                    console.log('ResearchComplete event received:', e);
+                // ResearchComplete - listen for all 4 event name format variations
+                // (matching the pattern that works for StatusStreamCreated)
+                .listen('.ResearchComplete', handleResearchCompleteEvent)
+                .listen('ResearchComplete', handleResearchCompleteEvent)
+                .listen('App\\\\Events\\\\ResearchComplete', handleResearchCompleteEvent)
+                .listen('App.Events.ResearchComplete', handleResearchCompleteEvent)
 
-                    // Log via EventLogger
-                    if (window.eventLogger) {
-                        window.eventLogger.logEvent('ResearchComplete', answerChannelName, {
-                            ...e,
-                            source: 'backend_broadcast',
-                            receivedAt: new Date().toISOString()
-                        });
-                    }
-
-                    // Directly call the Livewire method
-                    @this.call('handleResearchComplete', {
-                        interactionId: e.interaction_id,
-                        executionId: e.execution_id,
-                        timestamp: e.timestamp
-                    });
-                });
+                // HolisticWorkflowCompleted - listen for all 4 event name format variations
+                .listen('.HolisticWorkflowCompleted', handleHolisticWorkflowCompletedEvent)
+                .listen('HolisticWorkflowCompleted', handleHolisticWorkflowCompletedEvent)
+                .listen('App\\\\Events\\\\HolisticWorkflowCompleted', handleHolisticWorkflowCompletedEvent)
+                .listen('App.Events.HolisticWorkflowCompleted', handleHolisticWorkflowCompletedEvent);
 
             // Subscribe to source updates for Sources tab
             const sourcesChannelName = `sources-updated.${interactionId}`;
@@ -1171,20 +1224,9 @@
                         window.statusStreamManager.handleStatusStreamEvent(e);
                     }
 
-                    // Handle completion events as fallback (in case ResearchComplete broadcast is delayed)
-                    const isCompletion =
-                        e.source === 'single_agent_completed' ||
-                        e.source === 'agent_execution_completed' ||
-                        (e.source === 'system' && e.message && e.message.toLowerCase().includes('execution completed'));
-
-                    if (isCompletion) {
-                        console.log('Agent completion detected, calling handleResearchComplete');
-                        @this.call('handleResearchComplete', {
-                            interactionId: interactionId,
-                            executionId: e.execution_id || null,
-                            timestamp: e.timestamp || new Date().toISOString()
-                        });
-                    }
+                    // Note: Completion is now handled by dedicated HolisticWorkflowCompleted
+                    // and ResearchComplete events on the chat-interaction channel.
+                    // No fallback logic needed - status streams are only for progress updates.
 
                     // Update the Steps tab with real-time status updates (legacy)
                     updateStatusDisplayDirectly(e, interactionId);
@@ -2069,6 +2111,60 @@
         window.addEventListener('notify', (event) => {
             const { message, type } = event.detail;
             console.log('Notify event received:', { message, type });
+        });
+
+        // Listen for blocking execution errors
+        Livewire.on('blocking-execution-error', (event) => {
+            console.log('Blocking execution error received:', event);
+
+            const data = Array.isArray(event) ? event[0] : event;
+
+            // Store execution data globally for access by the modal
+            window.blockingExecutionData = {
+                id: data.blockingExecutionId,
+                agentName: data.agentName,
+                agentId: data.agentId,
+                state: data.executionState,
+                createdAt: data.executionCreatedAt,
+                canCancel: data.canCancel
+            };
+
+            // Update modal description with execution details
+            const descriptionEl = document.getElementById('cancel-modal-description');
+            if (descriptionEl && data.canCancel) {
+                descriptionEl.innerHTML = `
+                    <p class="mb-2">${data.message}</p>
+                    <div class="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg space-y-2 text-sm">
+                        <p><strong>Agent:</strong> ${data.agentName}</p>
+                        <p><strong>State:</strong> ${data.state}</p>
+                        <p><strong>Started:</strong> ${data.createdAt}</p>
+                    </div>
+                    <p class="mt-4 text-sm text-gray-600 dark:text-gray-400">
+                        Canceling this execution will stop it immediately and allow you to start a new one.
+                    </p>
+                `;
+
+                // Open the modal
+                Flux.modal('cancel-blocking-execution').show();
+            } else if (descriptionEl && !data.canCancel) {
+                descriptionEl.innerHTML = `
+                    <p class="mb-2">${data.message}</p>
+                    <p class="mt-4 text-sm text-yellow-600 dark:text-yellow-400">
+                        You cannot cancel this execution because you don't own it. Please wait for it to complete.
+                    </p>
+                `;
+            }
+        });
+
+        // Listen for execution canceled event to close modal
+        Livewire.on('execution-canceled', (event) => {
+            console.log('Execution canceled:', event);
+
+            // Close the modal
+            Flux.modal('cancel-blocking-execution').close();
+
+            // Clear the stored data
+            window.blockingExecutionData = null;
         });
     </script>
     @endpush

@@ -14,7 +14,7 @@
         @if(count($interactions) > 0 || !empty($pendingQuestion))
             <div class="flex-1 overflow-y-auto space-y-6 p-4" id="conversation-container">
                 @foreach($interactions as $interaction)
-                    <div class="flex justify-end group">
+                    <div class="flex justify-end group" wire:key="interaction-{{ $interaction->id }}">
                         <div class="w-[80%] bg-accent text-accent-foreground rounded-lg p-3 text-left relative">
                             {{ $interaction->question }}
                             @php
@@ -145,24 +145,11 @@
 
                                     <!-- Create Artifact Button -->
                                     <button wire:click="createArtifactFromAnswer({{ $interaction->id }})"
-                                            wire:loading.attr="disabled"
-                                            wire:loading.class="opacity-50 cursor-not-allowed"
-                                            wire:target="createArtifactFromAnswer"
                                             class="p-2 text-gray-500 hover:text-accent dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors duration-200"
                                             title="Save answer as artifact">
-                                        <!-- Default icon (shown when not loading) -->
-                                        <span wire:loading.remove wire:target="createArtifactFromAnswer">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                                            </svg>
-                                        </span>
-                                        <!-- Loading spinner (shown during loading) -->
-                                        <span wire:loading wire:target="createArtifactFromAnswer">
-                                            <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.984l2-2.693z"></path>
-                                            </svg>
-                                        </span>
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                        </svg>
                                     </button>
 
                                     <!-- Export Interaction Button -->
@@ -184,7 +171,7 @@
                                 <div class="w-[80%]">
                                     <!-- PERSISTENT: Wire:Stream Thinking Process Container - Always present to preserve WebSocket content -->
                                     <!-- Primary thinking process display (CSS controlled visibility) -->
-                                    <div class="relative p-4" style="display: {{ $isThinking ? 'block' : 'none' }}">
+                                    <div class="relative p-4" x-show="$wire.isThinking">
                                         <!-- Timeline line -->
                                         <div class="absolute left-10 top-4 bottom-4 w-px bg-border-default"></div>
 
@@ -218,7 +205,7 @@
                                     </div>
 
                                     <!-- Alpine markdown renderer for streaming/status display -->
-                                    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg p-3" style="display: {{ $isThinking ? 'none' : 'block' }}">
+                                    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg p-3" x-show="!$wire.isThinking">
                                         <div x-data="markdownRenderer()" class="text-primary  text-sm text-left"
                                              id="search-results-{{ $interaction->id }}">
                                             <span x-ref="source" class="hidden">{{ $isStreaming ? '_Connecting..._' : $currentStatus }}</span>

@@ -51,6 +51,8 @@ class ChatResearchInterface extends BaseChatInterface
 
     public bool $isOptimizingQuery = false;
 
+    public bool $showCancelModal = false;
+
     public function processAttachmentsForInteraction($interactionId): void
     {
         if (empty($this->attachments)) {
@@ -839,6 +841,13 @@ class ChatResearchInterface extends BaseChatInterface
             $statusReporter->report('workflow_dispatched', 'Research dispatched to background processing. You can continue using the application while results are being prepared.');
 
         } catch (\Exception $e) {
+            // Check if this is a blocking execution error
+            if ($this->isBlockingExecutionError($e)) {
+                $this->handleBlockingExecutionError($e, $interaction, $statusReporter);
+
+                return;
+            }
+
             // Handle execution failure using helper method
             $this->handleExecutionFailure(
                 $e,
@@ -1082,6 +1091,13 @@ class ChatResearchInterface extends BaseChatInterface
             $statusReporter->report('single_agent_dispatched', 'Single agent execution dispatched for processing. You can continue using the application while results are being prepared.');
 
         } catch (\Exception $e) {
+            // Check if this is a blocking execution error
+            if ($this->isBlockingExecutionError($e)) {
+                $this->handleBlockingExecutionError($e, $interaction, $statusReporter);
+
+                return;
+            }
+
             // Handle execution failure using helper method
             $this->handleExecutionFailure(
                 $e,
@@ -4255,11 +4271,11 @@ class ChatResearchInterface extends BaseChatInterface
                 ],
             ]);
 
-            // Add tag for easy filtering
-            $chatAnswerTag = \App\Models\ArtifactTag::firstOrCreate([
-                'name' => 'chat-answer',
-                'created_by' => auth()->id(),
-            ]);
+            // Add tag for easy filtering (use slug as unique identifier)
+            $chatAnswerTag = \App\Models\ArtifactTag::firstOrCreate(
+                ['slug' => 'chat-answer'],
+                ['name' => 'chat-answer', 'created_by' => auth()->id()]
+            );
             $artifact->tags()->attach($chatAnswerTag->id);
 
             // Create ChatInteractionArtifact pivot record
@@ -4405,6 +4421,159 @@ class ChatResearchInterface extends BaseChatInterface
         $this->dispatch('refreshArtifacts');
 
         // Livewire will automatically detect the property change and update the UI
+    }
+
+    /**
+     * Check if an exception is a blocking execution error.
+     *
+     * @param  \Exception  $e  Exception to check
+     * @return bool True if this is a blocking execution error
+     */
+    private function isBlockingExecutionError(\Exception $e): bool
+    {
+        return $e instanceof \RuntimeException
+            && str_contains($e->getMessage(), 'is already executing');
+    }
+
+    /**
+     * Handle blocking execution error by dispatching event with cancellation option.
+     *
+     * Extracts the blocking execution ID from the error message and dispatches
+     * an event to the frontend with execution details for user confirmation.
+     *
+     * @param  \Exception  $e  The blocking execution exception
+     * @param  ChatInteraction  $interaction  Current chat interaction
+     * @param  \App\Services\StatusReporter|null  $statusReporter  Optional status reporter
+     */
+    private function handleBlockingExecutionError(
+        \Exception $e,
+        ChatInteraction $interaction,
+        ?\App\Services\StatusReporter $statusReporter = null
+    ): void {
+        // Extract execution ID from error message: "Agent X is already executing (execution Y)."
+        if (preg_match('/execution (\d+)\)/', $e->getMessage(), $matches)) {
+            $blockingExecutionId = (int) $matches[1];
+
+            // Fetch the blocking execution to get details
+            $blockingExecution = AgentExecution::with('agent')->find($blockingExecutionId);
+
+            if ($blockingExecution) {
+                Log::info('ChatResearchInterface: Blocking execution detected', [
+                    'blocking_execution_id' => $blockingExecutionId,
+                    'agent_id' => $blockingExecution->agent_id,
+                    'current_user_id' => auth()->id(),
+                    'execution_user_id' => $blockingExecution->user_id,
+                ]);
+
+                // Update interaction with error message
+                $interaction->update([
+                    'answer' => $e->getMessage(),
+                ]);
+
+                // Report via StatusReporter
+                if ($statusReporter) {
+                    $statusReporter->report('error', $e->getMessage());
+                }
+
+                // Reset UI state
+                $this->isStreaming = false;
+                $this->isThinking = false;
+
+                // Dispatch event to frontend with execution details
+                $this->dispatch('blocking-execution-error', [
+                    'message' => $e->getMessage(),
+                    'blockingExecutionId' => $blockingExecutionId,
+                    'agentName' => $blockingExecution->agent->name ?? 'Unknown Agent',
+                    'agentId' => $blockingExecution->agent_id,
+                    'executionState' => $blockingExecution->state,
+                    'executionCreatedAt' => $blockingExecution->created_at->diffForHumans(),
+                    'canCancel' => $blockingExecution->user_id === auth()->id(),
+                ]);
+
+                // Reload interactions to show error
+                $this->loadInteractions();
+
+                return;
+            }
+        }
+
+        // If we couldn't extract the execution ID, fall back to regular error handling
+        Log::warning('ChatResearchInterface: Could not extract execution ID from blocking error', [
+            'error' => $e->getMessage(),
+        ]);
+
+        $this->handleExecutionFailure($e, $interaction, null, $statusReporter, 'execution');
+    }
+
+    /**
+     * Cancel an agent execution.
+     *
+     * Validates that the user owns the execution before canceling.
+     * Dispatches notifications and updates UI state.
+     *
+     * @param  int  $executionId  ID of the execution to cancel
+     */
+    public function cancelExecution(int $executionId): void
+    {
+        try {
+            $execution = AgentExecution::findOrFail($executionId);
+
+            // Validate user owns the execution
+            if ($execution->user_id !== auth()->id()) {
+                Log::warning('ChatResearchInterface: Unauthorized cancellation attempt', [
+                    'execution_id' => $executionId,
+                    'execution_user_id' => $execution->user_id,
+                    'current_user_id' => auth()->id(),
+                ]);
+
+                $this->dispatch('notify', [
+                    'message' => 'You can only cancel your own executions.',
+                    'type' => 'error',
+                ]);
+
+                return;
+            }
+
+            Log::info('ChatResearchInterface: Canceling execution', [
+                'execution_id' => $executionId,
+                'user_id' => auth()->id(),
+                'agent_id' => $execution->agent_id,
+                'state' => $execution->state,
+            ]);
+
+            // Cancel the execution and all child executions
+            $execution->cancel();
+
+            $this->dispatch('notify', [
+                'message' => 'Execution canceled successfully.',
+                'type' => 'success',
+            ]);
+
+            // Dispatch event to close modal and refresh UI
+            $this->dispatch('execution-canceled', [
+                'executionId' => $executionId,
+            ]);
+
+            // Reload interactions
+            $this->loadInteractions();
+
+            // Prompt user to try again
+            $this->dispatch('notify', [
+                'message' => 'You can now submit your query again.',
+                'type' => 'info',
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('ChatResearchInterface: Error canceling execution', [
+                'execution_id' => $executionId,
+                'error' => $e->getMessage(),
+            ]);
+
+            $this->dispatch('notify', [
+                'message' => 'Failed to cancel execution: '.$e->getMessage(),
+                'type' => 'error',
+            ]);
+        }
     }
 
     public function render()

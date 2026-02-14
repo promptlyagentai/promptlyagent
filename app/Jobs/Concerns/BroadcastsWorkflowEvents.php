@@ -40,16 +40,29 @@ trait BroadcastsWorkflowEvents
             // Truncate payload if needed
             $truncated = self::truncatePayloadIfNeeded($result, $metadata, $sources, $steps, $interactionId);
 
-            event(new HolisticWorkflowCompleted(
+            $event = new HolisticWorkflowCompleted(
                 $interactionId,
                 $executionId,
                 $truncated['result'],
                 $truncated['metadata'],
                 $sources,
                 $steps
-            ));
+            );
 
-            Log::info('BroadcastsWorkflowEvents: Fired HolisticWorkflowCompleted event');
+            Log::info('BroadcastsWorkflowEvents: Created HolisticWorkflowCompleted event object', [
+                'event_class' => get_class($event),
+                'interaction_id' => $interactionId,
+            ]);
+
+            // Dispatch event - Laravel will handle broadcasting via ShouldBroadcastNow
+            event($event);
+
+            // Also explicitly broadcast to ensure delivery from job context
+            \Illuminate\Support\Facades\Broadcast::connection('reverb')
+                ->channel('chat-interaction.'.$interactionId)
+                ->broadcast('HolisticWorkflowCompleted', $event->broadcastWith());
+
+            Log::info('BroadcastsWorkflowEvents: Dispatched and explicitly broadcast HolisticWorkflowCompleted event');
         } catch (Throwable $e) {
             Log::error('BroadcastsWorkflowEvents: Failed to broadcast holistic completion', [
                 'interaction_id' => $interactionId,
@@ -87,14 +100,27 @@ trait BroadcastsWorkflowEvents
             // Truncate payload if needed
             $truncated = self::truncatePayloadIfNeeded($result, $enrichedMetadata, $sources, $steps, $interactionId);
 
-            event(new ResearchComplete(
+            $event = new ResearchComplete(
                 $interactionId,
                 $executionId,
                 $truncated['result'],
                 $truncated['metadata']
-            ));
+            );
 
-            Log::info('BroadcastsWorkflowEvents: Fired ResearchComplete event');
+            Log::info('BroadcastsWorkflowEvents: Created ResearchComplete event object', [
+                'event_class' => get_class($event),
+                'interaction_id' => $interactionId,
+            ]);
+
+            // Dispatch event - Laravel will handle broadcasting via ShouldBroadcastNow
+            event($event);
+
+            // Also explicitly broadcast to ensure delivery from job context
+            \Illuminate\Support\Facades\Broadcast::connection('reverb')
+                ->channel('chat-interaction.'.$interactionId)
+                ->broadcast('ResearchComplete', $event->broadcastWith());
+
+            Log::info('BroadcastsWorkflowEvents: Dispatched and explicitly broadcast ResearchComplete event');
         } catch (Throwable $e) {
             Log::error('BroadcastsWorkflowEvents: Failed to broadcast single-agent completion', [
                 'interaction_id' => $interactionId,
@@ -134,14 +160,22 @@ trait BroadcastsWorkflowEvents
             // Truncate payload if needed
             $truncated = self::truncatePayloadIfNeeded($result, $enrichedMetadata, $sources, $steps, $interactionId);
 
-            event(new ResearchComplete(
+            $event = new ResearchComplete(
                 $interactionId,
                 $executionId,
                 $truncated['result'],
                 $truncated['metadata']
-            ));
+            );
 
-            Log::info('BroadcastsWorkflowEvents: Fired ResearchComplete event (static)');
+            // Dispatch event
+            event($event);
+
+            // Also explicitly broadcast to ensure delivery from job context
+            \Illuminate\Support\Facades\Broadcast::connection('reverb')
+                ->channel('chat-interaction.'.$interactionId)
+                ->broadcast('ResearchComplete', $event->broadcastWith());
+
+            Log::info('BroadcastsWorkflowEvents: Dispatched and explicitly broadcast ResearchComplete event (static)');
         } catch (Throwable $e) {
             Log::error('BroadcastsWorkflowEvents: Failed to broadcast single-agent completion (static)', [
                 'interaction_id' => $interactionId,
@@ -246,16 +280,24 @@ trait BroadcastsWorkflowEvents
             // Truncate payload if needed
             $truncated = self::truncatePayloadIfNeeded($result, $metadata, $sources, $steps, $interactionId);
 
-            event(new HolisticWorkflowCompleted(
+            $event = new HolisticWorkflowCompleted(
                 $interactionId,
                 $executionId,
                 $truncated['result'],
                 $truncated['metadata'],
                 $sources,
                 $steps
-            ));
+            );
 
-            Log::info('BroadcastsWorkflowEvents: Fired HolisticWorkflowCompleted event (static)');
+            // Dispatch event
+            event($event);
+
+            // Also explicitly broadcast to ensure delivery from job context
+            \Illuminate\Support\Facades\Broadcast::connection('reverb')
+                ->channel('chat-interaction.'.$interactionId)
+                ->broadcast('HolisticWorkflowCompleted', $event->broadcastWith());
+
+            Log::info('BroadcastsWorkflowEvents: Dispatched and explicitly broadcast HolisticWorkflowCompleted event (static)');
         } catch (Throwable $e) {
             Log::error('BroadcastsWorkflowEvents: Failed to broadcast holistic completion (static)', [
                 'interaction_id' => $interactionId,
