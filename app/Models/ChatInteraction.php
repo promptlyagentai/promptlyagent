@@ -151,11 +151,12 @@ class ChatInteraction extends Model
             $answerChanged = $chatInteraction->isDirty('answer') || $chatInteraction->wasRecentlyCreated;
 
             if ($hasAnswer && $answerChanged) {
+                // Generate title for session if this is the first interaction with an answer
+                // MUST happen BEFORE broadcast so PWA has updated session title
+                \App\Services\SessionTitleService::generateTitleIfNeeded($chatInteraction);
+
                 // Send real-time interaction updated event when answer changes
                 EventStreamNotifier::interactionUpdated($chatInteraction->id, $chatInteraction->answer);
-
-                // Generate title for session if this is the first interaction with an answer
-                \App\Services\SessionTitleService::generateTitleIfNeeded($chatInteraction);
 
                 // Generate summary if answer is provided and no summary exists
                 if (empty($chatInteraction->summary)) {

@@ -34,6 +34,9 @@ class SessionTitleService
                 if ($title) {
                     $session->update(['title' => $title]);
 
+                    // Broadcast session update to PWA
+                    event(new \App\Events\ChatSessionUpdated($session));
+
                     Log::info('SessionTitleService: Generated title using TitleGenerator', [
                         'session_id' => $session->id,
                         'interaction_id' => $interaction->id,
@@ -51,6 +54,9 @@ class SessionTitleService
                 $title = Str::words($interaction->question, 5, '');
                 if ($title) {
                     $session->update(['title' => trim($title)]);
+
+                    // Broadcast session update
+                    event(new \App\Events\ChatSessionUpdated($session));
                 }
             }
         }

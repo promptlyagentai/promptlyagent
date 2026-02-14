@@ -21,9 +21,12 @@
 <meta name="apple-mobile-web-app-title" content="PromptlyAgent">
 
 <!-- Icons -->
-<link rel="icon" href="/favicon.ico" sizes="any">
-<link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="/apple-touch-icon-180x180.png">
+@php
+    $iconVersion = config('pwa.icon_version', '2');
+@endphp
+<link rel="icon" href="/favicon.ico?v={{ $iconVersion }}" sizes="any">
+<link rel="icon" href="/favicon.svg?v={{ $iconVersion }}" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon-180x180.png?v={{ $iconVersion }}">
 <link rel="manifest" href="{{ route('pwa.manifest') }}">
 
 <link rel="preconnect" href="https://fonts.bunny.net">

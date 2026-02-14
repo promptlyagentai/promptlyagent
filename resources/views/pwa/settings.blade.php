@@ -40,20 +40,6 @@
                             </svg>
                         </button>
                     </div>
-                    <div class="mt-2 p-3 bg-accent/10 border border-accent rounded-lg">
-                        <p class="text-xs font-medium text-primary mb-1">Required Token Abilities:</p>
-                        <ul class="text-xs text-secondary space-y-1">
-                            <li>• <code class="px-1 py-0.5 bg-code rounded">agent:view</code> - View available agents</li>
-                            <li>• <code class="px-1 py-0.5 bg-code rounded">chat:create</code> - Create chat sessions</li>
-                            <li>• <code class="px-1 py-0.5 bg-code rounded">chat:view</code> - View and continue chat sessions</li>
-                            <li>• <code class="px-1 py-0.5 bg-code rounded">chat:manage</code> - Manage sessions (archive, keep)</li>
-                            <li>• <code class="px-1 py-0.5 bg-code rounded">chat:delete</code> - Delete chat sessions</li>
-                            <li>• <code class="px-1 py-0.5 bg-code rounded">knowledge:read</code> - Search knowledge base</li>
-                        </ul>
-                        <p class="text-xs text-secondary mt-2">
-                            Generate a token in Settings → API Tokens with these abilities
-                        </p>
-                    </div>
                 </div>
 
                 <!-- Save & Test Buttons -->
@@ -70,6 +56,19 @@
                             class="px-4 py-2 bg-surface  hover:bg-surface-elevated disabled:opacity-50 rounded-lg font-medium">
                         <span x-show="!testing">Test</span>
                         <span x-show="testing">Testing...</span>
+                    </button>
+                </div>
+
+                <!-- QR Scanner Button -->
+                <div class="mt-4">
+                    <button
+                        @click="startQrScanner()"
+                        type="button"
+                        class="w-full py-3 px-4 bg-accent text-white rounded-lg font-medium hover:bg-accent/90 flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/>
+                        </svg>
+                        Scan QR Code
                     </button>
                 </div>
 
@@ -91,6 +90,36 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- QR Scanner Modal (shown when scanning) -->
+        <div x-show="scanning"
+             x-cloak
+             class="fixed inset-0 bg-black/90 z-50 flex flex-col"
+             @click.self="stopQrScanner()">
+
+            <div class="flex items-center justify-between p-4 bg-black/50">
+                <h3 class="text-white font-semibold">Scan QR Code</h3>
+                <button @click="stopQrScanner()" class="text-white p-2">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="flex-1 flex items-center justify-center p-4">
+                <div id="qr-reader" class="w-full max-w-md" style="min-height: 300px;"></div>
+            </div>
+
+            <!-- Debug info -->
+            <div x-show="scanError" class="p-4 bg-red-500/20 text-white text-sm">
+                <p class="font-semibold mb-1">Camera Error:</p>
+                <p x-text="scanError"></p>
+            </div>
+
+            <div class="p-4 text-center text-white text-sm">
+                Position QR code within the frame
             </div>
         </div>
 
@@ -180,6 +209,9 @@
                 syncStatus: null,
                 auth: null,
                 sync: null,
+                scanning: false,
+                html5QrCode: null,
+                scanError: null,
 
                 async init() {
                     // Wait for PWA services to be available
@@ -276,6 +308,155 @@
                         console.error('Clear failed:', error);
                     }
                     this.clearing = false;
+                },
+
+/**
+                 * Start QR code scanner
+                 */
+                async startQrScanner() {
+                    this.scanning = true;
+                    this.scanError = null;
+
+                    // Check for secure context (HTTPS required for camera access)
+                    if (!window.isSecureContext) {
+                        this.scanError = 'Camera access requires HTTPS. Please access the app via HTTPS.';
+                        console.error('QR Scanner: Not in secure context (HTTPS required)');
+                        return;
+                    }
+
+                    console.log('QR Scanner: Starting scanner...');
+
+                    // Wait for modal to render
+                    await this.$nextTick();
+
+                    // Check if container exists
+                    const container = document.getElementById('qr-reader');
+                    if (!container) {
+                        this.scanError = 'QR reader container not found';
+                        console.error('QR Scanner: Container element not found');
+                        return;
+                    }
+
+                    console.log('QR Scanner: Container found, loading library...');
+
+                    // Import html5-qrcode library (load from CDN)
+                    if (!window.Html5Qrcode) {
+                        try {
+                            await this.loadQrLibrary();
+                            console.log('QR Scanner: Library loaded successfully');
+                        } catch (err) {
+                            this.scanError = 'Failed to load QR scanner library. Check internet connection.';
+                            console.error('QR Scanner: Library load failed:', err);
+                            return;
+                        }
+                    }
+
+                    console.log('QR Scanner: Initializing Html5Qrcode...');
+                    this.html5QrCode = new Html5Qrcode("qr-reader");
+
+                    try {
+                        console.log('QR Scanner: Requesting camera access...');
+                        await this.html5QrCode.start(
+                            { facingMode: "environment" }, // Use back camera
+                            {
+                                fps: 10,
+                                qrbox: { width: 250, height: 250 },
+                                aspectRatio: 1.0
+                            },
+                            (decodedText) => {
+                                console.log('QR Scanner: Code scanned:', decodedText.substring(0, 50) + '...');
+                                this.handleQrCodeScanned(decodedText);
+                            },
+                            (errorMessage) => {
+                                // Ignore scanning errors (just means no QR detected yet)
+                            }
+                        );
+                        console.log('QR Scanner: Camera started successfully');
+                    } catch (err) {
+                        console.error('QR Scanner: Failed to start camera:', err);
+                        console.error('Error name:', err.name);
+                        console.error('Error message:', err.message);
+
+                        // Detailed error messages
+                        if (err.name === 'NotAllowedError') {
+                            this.scanError = 'Camera permission denied. Please allow camera access in your browser settings.';
+                        } else if (err.name === 'NotFoundError') {
+                            this.scanError = 'No camera found on this device.';
+                        } else if (err.name === 'NotReadableError') {
+                            this.scanError = 'Camera is already in use by another app.';
+                        } else if (err.name === 'OverconstrainedError') {
+                            this.scanError = 'Camera configuration not supported by device.';
+                        } else {
+                            this.scanError = `Camera error: ${err.message}`;
+                        }
+
+                        this.stopQrScanner();
+                    }
+                },
+
+                /**
+                 * Stop QR code scanner
+                 */
+                async stopQrScanner() {
+                    if (this.html5QrCode) {
+                        try {
+                            await this.html5QrCode.stop();
+                            this.html5QrCode.clear();
+                        } catch (err) {
+                            console.error('Error stopping scanner:', err);
+                        }
+                        this.html5QrCode = null;
+                    }
+                    this.scanning = false;
+                },
+
+                /**
+                 * Handle scanned QR code data
+                 */
+                handleQrCodeScanned(decodedText) {
+                    try {
+                        // Parse JSON data
+                        const data = JSON.parse(decodedText);
+
+                        if (data.server && data.token) {
+                            // Auto-fill form fields
+                            this.serverUrl = data.server;
+                            this.apiToken = data.token;
+
+                            // Stop scanner
+                            this.stopQrScanner();
+
+                            // Show success message
+                            alert('QR code scanned successfully! Click "Save & Test Connection" to continue.');
+                        } else {
+                            alert('Invalid QR code format. Please use a QR code generated from PWA Settings.');
+                        }
+                    } catch (error) {
+                        console.error('Failed to parse QR code:', error);
+                        alert('Invalid QR code. Please try again.');
+                    }
+                },
+
+                /**
+                 * Load html5-qrcode library (local copy for production stability)
+                 */
+                async loadQrLibrary() {
+                    return new Promise((resolve, reject) => {
+                        if (window.Html5Qrcode) {
+                            resolve();
+                            return;
+                        }
+
+                        const script = document.createElement('script');
+                        // Use local copy instead of CDN to avoid CSP/network issues in production
+                        script.src = '/vendor/html5-qrcode/html5-qrcode.min.js';
+                        script.onload = resolve;
+                        script.onerror = (error) => {
+                            console.error('Failed to load local QR library:', error);
+                            reject(new Error('QR scanner library failed to load'));
+                        };
+                        document.head.appendChild(script);
+                    });
                 },
 
                 formatBytes(bytes) {

@@ -49,6 +49,7 @@
             <flux:navlist.item :href="route('settings.api-tokens')" wire:navigate>{{ __('API Tokens') }}</flux:navlist.item>
             <flux:navlist.item :href="route('settings.help-widget')" wire:navigate>{{ __('Interactive Help') }}</flux:navlist.item>
             <flux:navlist.item :href="route('settings.research-suggestions')" wire:navigate>{{ __('Research Suggestions') }}</flux:navlist.item>
+            <flux:navlist.item :href="route('settings.pwa')" wire:navigate>{{ __('PWA/Mobile Access') }}</flux:navlist.item>
             <flux:navlist.item :href="route('integrations.index')">{{ __('Integrations') }}</flux:navlist.item>
         </flux:navlist>
     </div>

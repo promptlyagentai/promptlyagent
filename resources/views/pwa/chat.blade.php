@@ -98,8 +98,9 @@
 
  <!-- Copy Answer Button -->
  <button @click="copyAnswer(interaction)"
- class="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-surface rounded-lg transition-colors"
- title="Copy answer">
+ :disabled="interaction.id > 1000000000000"
+ class="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-surface rounded-lg transition-colors disabled:opacity-50"
+ :title="interaction.id > 1000000000000 ? 'Preparing...' : 'Copy answer'">
  <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
  <path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/>
  </svg>
@@ -107,9 +108,9 @@
 
  <!-- Create Artifact Button -->
  <button @click="createArtifact(interaction)"
- :disabled="interaction.creatingArtifact"
+ :disabled="interaction.creatingArtifact || interaction.id > 1000000000000"
  class="p-2 text-gray-500 hover:text-accent dark:text-gray-400 hover:bg-surface rounded-lg transition-colors disabled:opacity-50"
- title="Create artifact">
+ :title="interaction.id > 1000000000000 ? 'Preparing...' : 'Create artifact'">
  <!-- Icon (shown when not loading) -->
  <svg x-show="!interaction.creatingArtifact" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
  <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
@@ -123,8 +124,9 @@
 
  <!-- Export Button -->
  <button @click="exportInteraction(interaction)"
- class="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-surface rounded-lg transition-colors"
- title="Export as Markdown">
+ :disabled="interaction.id > 1000000000000"
+ class="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-surface rounded-lg transition-colors disabled:opacity-50"
+ :title="interaction.id > 1000000000000 ? 'Preparing...' : 'Export as Markdown'">
  <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
  <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
  </svg>
@@ -193,6 +195,13 @@
  </button>
 
  <textarea x-ref="messageInput" x-model="message" @keydown.enter.prevent="if (!$event.shiftKey) sendMessage()" placeholder="Type a message..." rows="1" class="flex-1 px-4 py-2 bg-surface border border-default rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent resize-none max-h-32" :disabled="sending || !isOnline"></textarea>
+
+ <!-- Voice Input Button -->
+ <button x-show="voiceInputSupported" @click="toggleVoiceInput()" :disabled="sending || !isOnline || voiceInputCooldown" class="p-2 hover:bg-surface rounded-lg flex-shrink-0 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" :class="{ 'text-red-500 animate-pulse': isListening, 'text-gray-500': !isListening }" :title="voiceInputCooldown ? 'Please wait...' : (isListening ? 'Stop listening' : 'Voice input')">
+ <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+ <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+ </svg>
+ </button>
 
  <button @click="sendMessage()" :disabled="!message.trim() && selectedFiles.length === 0 || sending || !isOnline" class="p-2 bg-accent hover:bg-accent disabled:bg-accent/50 disabled:opacity-50 text-white rounded-lg flex-shrink-0">
  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -851,6 +860,12 @@
  isOnline: navigator.onLine,
  initialSessionId: initialSessionId,
 
+ // Voice input state
+ voiceInputSupported: false,
+ isListening: false,
+ recognition: null,
+ voiceInputCooldown: false,
+
  // Bulk edit state
  bulkEditMode: false,
  selectedSessionIds: [],
@@ -921,6 +936,7 @@
 
  // Echo channel tracking
  currentArtifactChannel: null,      // Track current artifact channel subscription
+ sessionChannel: null,               // Track current session channel subscription
 
  // Services
  auth: null,
@@ -967,9 +983,13 @@
  window.addEventListener('online', () => this.isOnline = true);
  window.addEventListener('offline', () => this.isOnline = false);
 
- // Listen for artifact conversion completion and artifact creation via Echo
+ // Listen for artifact conversion completion, artifact creation, and session updates via Echo
  this.setupConversionListener();
  this.setupArtifactListener();
+ this.setupSessionListener();
+
+ // Initialize voice input if supported
+ this.initVoiceInput();
  },
 
  async setupArtifactListener() {
@@ -1050,6 +1070,223 @@
  // Trigger initial setup if session already exists
  if (this.currentSession?.id) {
  window.dispatchEvent(new CustomEvent('session-changed'));
+ }
+ },
+
+ async setupSessionListener() {
+ if (!window.Echo) {
+ console.warn('Cannot setup session listener: Echo not available');
+ return;
+ }
+
+ // Listen for session updates (title changes) via Echo
+ // Similar pattern to artifact listener
+ window.addEventListener('session-changed', () => {
+ if (!this.currentSession?.id || !window.Echo) {
+ return;
+ }
+
+ const channelName = `session.${this.currentSession.id}`;
+
+ // Unsubscribe from previous channel if different
+ if (this.sessionChannel && this.sessionChannel !== channelName) {
+ console.log('Leaving previous session channel:', this.sessionChannel);
+ window.Echo.leave(this.sessionChannel);
+ this.sessionChannel = null;
+ }
+
+ // Subscribe to new channel if not already subscribed
+ if (this.sessionChannel !== channelName) {
+ console.log('Subscribing to session channel:', channelName);
+ this.sessionChannel = channelName;
+
+ // Use public channel (not private) to avoid auth issues in PWA
+ window.Echo.channel(channelName)
+ .listen('ChatSessionUpdated', (data) => {
+ console.log('Session title updated:', data);
+ if (data.title && this.currentSession) {
+ this.currentSession.title = data.title;
+ this.currentSession.updated_at = data.updated_at;
+ console.log('Session title updated to:', data.title);
+ }
+ });
+ }
+ });
+
+ // Trigger initial setup if session already exists
+ if (this.currentSession?.id) {
+ window.dispatchEvent(new CustomEvent('session-changed'));
+ }
+ },
+
+ /**
+ * Refresh current session data from API
+ */
+ async refreshSession() {
+ if (!this.currentSession?.id) return;
+
+ try {
+ const result = await this.sessionAPI.getSession(this.currentSession.id);
+ if (result.success && result.session) {
+ this.currentSession = result.session;
+ console.log('Session refreshed:', this.currentSession.title);
+ }
+ } catch (error) {
+ console.error('Failed to refresh session:', error);
+ }
+ },
+
+ /**
+ * Initialize Web Speech API for voice input
+ */
+ initVoiceInput() {
+ // Check if Web Speech API is supported
+ const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+ if (!SpeechRecognition) {
+ console.log('Web Speech API not supported in this browser');
+ this.voiceInputSupported = false;
+ return;
+ }
+
+ console.log('Speech Recognition API:', SpeechRecognition.name, 'Browser:', navigator.userAgent.split(' ').slice(-2).join(' '));
+
+ this.voiceInputSupported = true;
+ this.recognition = new SpeechRecognition();
+
+ // Configure recognition
+ this.recognition.continuous = false; // Stop after single phrase
+ this.recognition.interimResults = false; // Only final results
+ this.recognition.lang = 'en-US'; // Default language
+
+ // Handle recognition start
+ this.recognition.onstart = () => {
+ console.log('Speech recognition started successfully');
+ this.isListening = true;
+ };
+
+ // Handle successful recognition
+ this.recognition.onresult = (event) => {
+ const transcript = event.results[0][0].transcript;
+ console.log('Voice input recognized:', transcript);
+
+ // Insert at cursor position or append
+ const textarea = this.$refs.messageInput;
+ const start = textarea.selectionStart;
+ const end = textarea.selectionEnd;
+ const currentMessage = this.message || '';
+
+ // Add space before if there's existing text and cursor is not at start
+ const prefix = (start > 0 && currentMessage[start - 1] !== ' ') ? ' ' : '';
+ // Add space after if there's text after cursor
+ const suffix = (end < currentMessage.length && currentMessage[end] !== ' ') ? ' ' : '';
+
+ this.message = currentMessage.substring(0, start) + prefix + transcript + suffix + currentMessage.substring(end);
+
+ // Set cursor position after inserted text
+ this.$nextTick(() => {
+ const newPosition = start + prefix.length + transcript.length + suffix.length;
+ textarea.setSelectionRange(newPosition, newPosition);
+ textarea.focus();
+ });
+
+ this.isListening = false;
+ };
+
+ // Handle errors
+ this.recognition.onerror = (event) => {
+ console.error('Speech recognition error:', event.error, 'Event:', event);
+ this.isListening = false;
+
+ if (event.error === 'not-allowed') {
+ this.showToast('Microphone permission denied. Please allow microphone access.', 'error');
+ this.voiceInputSupported = false; // Disable until page reload
+ } else if (event.error === 'no-speech') {
+ this.showToast('No speech detected. Please try again.', 'warning');
+ } else if (event.error === 'network') {
+ // Network errors mean the browser's speech service is unavailable
+ console.error('Speech recognition service unavailable. Browser:', navigator.userAgent);
+
+ // Detect if it's Brave or mobile mode
+ const isBrave = navigator.brave && navigator.brave.isBrave;
+ const isMobile = /Mobile|Android/i.test(navigator.userAgent);
+
+ let message = 'Speech service unavailable.';
+ if (isBrave) {
+ message += ' Try disabling Brave Shields for this site.';
+ } else if (isMobile) {
+ message += ' Mobile mode may have limited support.';
+ } else {
+ message += ' Check your internet connection.';
+ }
+
+ this.showToast(message, 'error');
+
+ // Disable voice input if network errors persist
+ this.voiceInputCooldown = true;
+ setTimeout(() => { this.voiceInputCooldown = false; }, 5000);
+ } else if (event.error === 'audio-capture') {
+ this.showToast('No microphone detected. Please connect a microphone.', 'error');
+ } else if (event.error !== 'aborted') {
+ this.showToast('Voice input error: ' + event.error, 'error');
+ }
+ };
+
+ // Handle end of recognition
+ this.recognition.onend = () => {
+ this.isListening = false;
+ };
+
+ console.log('Voice input initialized successfully');
+ },
+
+ /**
+ * Toggle voice input recording
+ */
+ toggleVoiceInput() {
+ if (!this.voiceInputSupported || !this.recognition) {
+ return;
+ }
+
+ // Check cooldown period
+ if (this.voiceInputCooldown) {
+ console.log('Voice input on cooldown, please wait');
+ return;
+ }
+
+ if (this.isListening) {
+ // Stop listening
+ try {
+ this.recognition.stop();
+ this.isListening = false;
+ console.log('Voice input stopped');
+ } catch (error) {
+ console.error('Failed to stop voice input:', error);
+ this.isListening = false;
+ }
+ } else {
+ // Start listening
+ try {
+ // Guard against calling start() when already running
+ if (this.recognition && this.recognition.state !== 'running') {
+ console.log('Calling recognition.start()...');
+ this.recognition.start();
+ // isListening will be set to true in onstart handler
+ } else {
+ console.warn('Voice recognition already running');
+ }
+ } catch (error) {
+ console.error('Failed to start voice input:', error);
+
+ // Handle specific error types
+ if (error.name === 'InvalidStateError') {
+ console.warn('Speech recognition already started');
+ } else {
+ this.showToast('Failed to start voice input', 'error');
+ }
+
+ this.isListening = false;
+ }
  }
  },
 
@@ -1499,7 +1736,23 @@
  // Update interactions with latest artifacts from API (merge, don't replace)
  if (result.interactions) {
  result.interactions.forEach(apiInteraction => {
- const localIndex = this.interactions.findIndex(i => i.id === apiInteraction.id);
+ // Try to find by real ID first
+ let localIndex = this.interactions.findIndex(i => i.id === apiInteraction.id);
+
+ // If not found by real ID, try to match by question (for temp ID interactions)
+ if (localIndex === -1) {
+ localIndex = this.interactions.findIndex(i =>
+ i.question === apiInteraction.question &&
+ i.id > 1000000000000 // Has temporary timestamp ID
+ );
+
+ // Update the temporary ID to the real database ID
+ if (localIndex !== -1) {
+ console.log(`Updating temp ID ${this.interactions[localIndex].id} to real ID ${apiInteraction.id}`);
+ this.interactions[localIndex].id = apiInteraction.id;
+ }
+ }
+
  if (localIndex !== -1 && apiInteraction.artifacts) {
  console.log('API artifacts for interaction', apiInteraction.id, ':', apiInteraction.artifacts);
  apiInteraction.artifacts.forEach((artifact, idx) => {

@@ -55,11 +55,13 @@ chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/v
 php artisan config:clear 2>/dev/null || true
 php artisan config:cache 2>/dev/null || true
 
-# Run optimization caches in background to avoid blocking web server startup
-# These may hang if they try to initialize external connections (e.g., MCP providers)
-# Using timeout to prevent indefinite hangs
+# Cache routes synchronously - critical for application to function properly
+# Routes must be cached before web server starts to avoid 404s
+php artisan route:cache 2>/dev/null || true
+
+# Run non-critical optimizations in background to avoid blocking web server startup
+# View caching may hang if it tries to initialize external connections
 (
-    timeout 30 php artisan route:cache 2>/dev/null || echo "Route cache timed out or failed (non-critical)"
     timeout 30 php artisan view:cache 2>/dev/null || echo "View cache timed out or failed (non-critical)"
 ) &
 

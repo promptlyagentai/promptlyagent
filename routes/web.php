@@ -106,6 +106,7 @@ Route::middleware(['auth'])->group(function () {
     Volt::route('settings/api-tokens', 'settings.api-tokens')->name('settings.api-tokens');
     Volt::route('settings/help-widget', 'settings.help-widget')->name('settings.help-widget');
     Volt::route('settings/research-suggestions', 'settings.research-suggestions')->name('settings.research-suggestions');
+    Volt::route('settings/pwa', 'settings.pwa')->name('settings.pwa');
 
     Route::prefix('settings/integrations')->name('integrations.')->group(function () {
         Route::get('/', [\App\Http\Controllers\IntegrationController::class, 'index'])->name('index');
@@ -191,6 +192,7 @@ Route::prefix('pwa')->name('pwa.')->group(function () {
         ->name('chat.session');
     Route::get('/knowledge', [\App\Http\Controllers\PwaController::class, 'knowledge'])->name('knowledge');
     Route::get('/settings', [\App\Http\Controllers\PwaController::class, 'settings'])->name('settings');
+    Route::get('/setup/{code}', [\App\Http\Controllers\PwaController::class, 'setup'])->name('setup');
     Route::post('/share-target', [\App\Http\Controllers\PwaController::class, 'shareTarget'])
         ->middleware(['auth', 'throttle:10,1'])
         ->name('share-target');

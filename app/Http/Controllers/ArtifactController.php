@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Artifact;
+use App\Models\ChatInteraction;
+use App\Models\ChatSession;
 use App\Models\Document;
 use App\Services\Assets\AssetService;
 use App\Services\Pandoc\PandocConversionService;
@@ -26,6 +28,19 @@ class ArtifactController extends Controller
             'filetype' => 'required|string|max:50',
             'privacy_level' => 'required|in:private,public',
         ]);
+
+        // DEFENSE IN DEPTH: Ensure session title is generated
+        // This handles edge cases where title generation hasn't completed
+        $session = ChatSession::find($validated['chat_session_id']);
+        $interaction = ChatInteraction::find($validated['chat_interaction_id']);
+
+        if ($session && $interaction) {
+            if (\App\Services\SessionTitleService::isDefaultDatetimeTitle($session->title)) {
+                // Trigger synchronous title generation if still default
+                \App\Services\SessionTitleService::generateTitleIfNeeded($interaction);
+                $session->refresh(); // Reload to get updated title
+            }
+        }
 
         // Create artifact
         $artifact = Artifact::create([

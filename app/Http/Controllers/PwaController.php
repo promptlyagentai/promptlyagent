@@ -3,12 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Services\Knowledge\KnowledgeManager;
+use App\Services\Pwa\PwaTokenService;
 use Illuminate\Http\Request;
 
 class PwaController extends Controller
 {
     public function __construct(
-        protected KnowledgeManager $knowledgeManager
+        protected KnowledgeManager $knowledgeManager,
+        protected PwaTokenService $pwaTokenService
     ) {}
 
     /**
@@ -46,6 +48,24 @@ class PwaController extends Controller
     }
 
     /**
+     * PWA setup page with installation instructions and token QR
+     */
+    public function setup(string $code)
+    {
+        $tokenData = $this->pwaTokenService->getTokenFromSetupCode($code);
+
+        if (! $tokenData) {
+            abort(404, 'Setup code is invalid or expired. Please generate a new QR code from desktop settings.');
+        }
+
+        return view('pwa.setup', [
+            'setupCode' => $code,
+            'serverUrl' => $tokenData['server'],
+            'apiToken' => $tokenData['token'],
+        ]);
+    }
+
+    /**
      * Generate dynamic PWA manifest with user's color scheme
      */
     public function manifest(Request $request)
@@ -64,6 +84,9 @@ class PwaController extends Controller
             }
         }
 
+        // Cache-busting version for icons (increment to force refresh)
+        $iconVersion = config('pwa.icon_version', '2');
+
         $manifest = [
             'name' => config('app.name', 'PromptlyAgent'),
             'short_name' => config('app.name', 'PromptlyAgent'),
@@ -77,23 +100,23 @@ class PwaController extends Controller
             'orientation' => 'portrait-primary',
             'icons' => [
                 [
-                    'src' => '/pwa-64x64.png',
+                    'src' => "/pwa-64x64.png?v={$iconVersion}",
                     'sizes' => '64x64',
                     'type' => 'image/png',
                 ],
                 [
-                    'src' => '/pwa-192x192.png',
+                    'src' => "/pwa-192x192.png?v={$iconVersion}",
                     'sizes' => '192x192',
                     'type' => 'image/png',
                 ],
                 [
-                    'src' => '/pwa-512x512.png',
+                    'src' => "/pwa-512x512.png?v={$iconVersion}",
                     'sizes' => '512x512',
                     'type' => 'image/png',
                     'purpose' => 'any',
                 ],
                 [
-                    'src' => '/maskable-icon-512x512.png',
+                    'src' => "/maskable-icon-512x512.png?v={$iconVersion}",
                     'sizes' => '512x512',
                     'type' => 'image/png',
                     'purpose' => 'maskable',
