@@ -73,7 +73,7 @@ class ExecuteResearchAgentStreamingJob implements ShouldQueue
             Log::info('ExecuteResearchAgentStreamingJob: Execution completed and event pushed to Redis', [
                 'execution_id' => $this->executionId,
                 'interaction_id' => $this->interactionId,
-                'status' => $execution->fresh()->status,
+                'status' => $execution->fresh()->state,
                 'answer_length' => strlen($result),
             ]);
 
@@ -91,7 +91,7 @@ class ExecuteResearchAgentStreamingJob implements ShouldQueue
             // Update execution status
             if (isset($execution)) {
                 $execution->update([
-                    'status' => 'failed',
+                    'state' => 'failed',
                     'error' => $e->getMessage(),
                 ]);
             }

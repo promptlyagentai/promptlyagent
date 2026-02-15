@@ -623,7 +623,7 @@ class AgentExecutor
             'chat_session_id' => $parentExecution->chat_session_id, // Include chat session for context
             'input' => $query,
             'max_steps' => $agent->max_steps,
-            'status' => 'running',
+            'state' => 'running',
             'parent_agent_execution_id' => $parentExecutionId,
         ]);
         $execution->save();
@@ -830,7 +830,7 @@ class AgentExecutor
                 'chat_session_id' => $execution->chat_session_id,
                 'input' => $synthesisInput,
                 'max_steps' => 1, // Simple synthesis, no tool usage needed
-                'status' => 'running',
+                'state' => 'running',
             ]);
 
             // Add explanatory message for AI handover during workflow synthesis
@@ -2742,7 +2742,7 @@ class AgentExecutor
 
             // Mark execution as orchestrating (don't complete it - synthesis will complete it)
             $execution->update([
-                'status' => 'running', // Keep as running, not completed
+                'state' => 'running', // Keep as running, not completed
                 'metadata' => array_merge($execution->metadata ?? [], [
                     'orchestration_message' => $message,
                     'workflow_orchestrated' => true,

@@ -254,8 +254,7 @@ class AgentExecution extends Model
         // Update the state
         $this->update(['state' => $newState]);
 
-        // Update status for backward compatibility
-        $this->syncStatusFromState();
+        // Status is now computed from state via accessor - no sync needed
     }
 
     public function agent(): BelongsTo

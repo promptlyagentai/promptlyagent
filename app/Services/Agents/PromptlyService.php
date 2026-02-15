@@ -4,7 +4,9 @@ namespace App\Services\Agents;
 
 use App\Models\Agent;
 use App\Models\AgentExecution;
+use App\Models\ChatInteraction;
 use App\Models\User;
+use App\Services\Agents\Config\Presets\PromptPresets;
 use App\Services\Agents\Schemas\AgentSelectionSchema;
 use App\Services\AI\ModelSelector;
 use Illuminate\Support\Facades\Log;
@@ -64,8 +66,57 @@ class PromptlyService
             throw new \Exception('No agents available for selection');
         }
 
-        // 2. Use AI to select best agent
-        $selection = $this->selectAgentWithAI($query, $agents);
+        // 2. Build conversation context BEFORE selection
+        $conversationContext = $this->buildConversationContext($chatSessionId);
+
+        // 3. Use AI to select best agent (with context!)
+        $selection = $this->selectAgentWithAI($query, $agents, $conversationContext);
+
+        // 4. Check if AI provided direct answer (and feature is enabled)
+        $directAnswerEnabled = config('promptly.direct_answer_enabled', false);
+        if ($directAnswerEnabled && ! empty($selection['direct_answer'])) {
+            Log::info('Promptly providing direct answer', [
+                'confidence' => $selection['confidence'],
+                'answer_length' => strlen($selection['direct_answer']),
+            ]);
+
+            // Get the selected agent
+            $agent = Agent::find($selection['agent_id']);
+            if (! $agent) {
+                $agent = Agent::where('agent_type', 'promptly')->first()
+                    ?? Agent::active()->where('show_in_chat', true)->first();
+            }
+
+            // Create completed execution with the provided answer
+            $execution = AgentExecution::create([
+                'agent_id' => $agent->id,
+                'user_id' => $user->id,
+                'chat_session_id' => $chatSessionId,
+                'parent_agent_execution_id' => $parentExecutionId,
+                'input' => $query,
+                'output' => $selection['direct_answer'],
+                'state' => AgentExecution::STATE_COMPLETED,
+                'max_steps' => 1, // Direct answer doesn't need steps
+                'started_at' => now(),
+                'completed_at' => now(),
+                'metadata' => [
+                    'direct_answer' => true,
+                    'confidence' => $selection['confidence'],
+                    'reasoning' => $selection['reasoning'],
+                ],
+            ]);
+
+            // Update ChatInteraction if provided
+            if ($interactionId) {
+                ChatInteraction::find($interactionId)?->update([
+                    'answer' => $selection['direct_answer'],
+                    'agent_execution_id' => $execution->id,
+                    'completed_at' => now(),
+                ]);
+            }
+
+            return $execution;
+        }
 
         Log::info('Promptly selected agent via AI', [
             'query' => substr($query, 0, 100),
@@ -107,9 +158,23 @@ class PromptlyService
     /**
      * Use AI to select the best agent for the query
      */
-    public function selectAgentWithAI(string $query, $agents): array
+    public function selectAgentWithAI(string $query, $agents, ?string $conversationContext = null): array
     {
-        // Prepare agent information for AI
+        // 1. Get Promptly Agent from database
+        $promptlyAgent = Agent::where('agent_type', 'promptly')->first();
+
+        if (! $promptlyAgent) {
+            // Fallback to hardcoded prompt if agent not in DB
+            $systemPrompt = $this->buildSelectionSystemPrompt();
+        } else {
+            // Use agent's actual system prompt from database
+            $systemPrompt = $promptlyAgent->system_prompt;
+
+            // Process {DIRECT_ANSWER_GUIDANCE} placeholder only
+            $systemPrompt = $this->processSelectionPromptPlaceholders($systemPrompt);
+        }
+
+        // 2. Prepare agent information for AI
         $agentInfo = $agents->map(function ($agent) {
             return [
                 'id' => $agent->id,
@@ -120,9 +185,8 @@ class PromptlyService
             ];
         })->toArray();
 
-        // Build selection prompt
-        $systemPrompt = $this->buildSelectionSystemPrompt();
-        $userPrompt = $this->buildSelectionUserPrompt($query, $agentInfo);
+        // 3. Build user prompt with conversation context
+        $userPrompt = $this->buildSelectionUserPrompt($query, $agentInfo, $conversationContext);
 
         // Use medium model for selection (fast but capable)
         $model = $this->modelSelector->getMediumModel();
@@ -142,6 +206,7 @@ class PromptlyService
                 'operation' => 'agent_selection',
                 'query_length' => strlen($query),
                 'available_agents' => count($agents),
+                'has_conversation_context' => $conversationContext !== null,
                 'source' => 'PromptlyService::selectAgent',
             ])
             ->asStructured();
@@ -218,9 +283,16 @@ Remember: You are selecting an agent to execute the task, not executing it yours
     /**
      * Build user prompt with query and agents
      */
-    protected function buildSelectionUserPrompt(string $query, array $agentInfo): string
+    protected function buildSelectionUserPrompt(string $query, array $agentInfo, ?string $conversationContext = null): string
     {
-        $prompt = "USER QUERY:\n{$query}\n\n";
+        $prompt = '';
+
+        // Add conversation context if available
+        if ($conversationContext) {
+            $prompt .= "CONVERSATION CONTEXT:\n{$conversationContext}\n\n";
+        }
+
+        $prompt .= "USER QUERY:\n{$query}\n\n";
         $prompt .= "AVAILABLE AGENTS:\n\n";
 
         foreach ($agentInfo as $agent) {
@@ -232,8 +304,61 @@ Remember: You are selecting an agent to execute the task, not executing it yours
             $prompt .= "---\n\n";
         }
 
-        $prompt .= 'Select the best agent for this query and explain your reasoning.';
+        $prompt .= 'Based on the conversation context and current query, either answer directly if you have high confidence, or select the best agent for delegation.';
 
         return $prompt;
+    }
+
+    /**
+     * Build conversation context for agent selection
+     *
+     * Only includes the most recent interaction to limit context size
+     */
+    protected function buildConversationContext(?int $chatSessionId): ?string
+    {
+        if (! $chatSessionId) {
+            return null;
+        }
+
+        $lastInteraction = ChatInteraction::where('chat_session_id', $chatSessionId)
+            ->whereNotNull('answer')
+            ->where('answer', '!=', '')
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        if (! $lastInteraction) {
+            return null;
+        }
+
+        // Truncate to 3000 chars max for medium model (plenty of room)
+        $answer = strlen($lastInteraction->answer) > 3000
+            ? substr($lastInteraction->answer, 0, 3000).'...[truncated]'
+            : $lastInteraction->answer;
+
+        return "## Previous Question\n".
+               '**Question**: '.($lastInteraction->question ?? 'No question recorded')."\n\n".
+               '**Answer**: '.$answer."\n\n";
+    }
+
+    /**
+     * Process placeholders in Promptly Agent's system prompt for selection
+     *
+     * Note: We only process {DIRECT_ANSWER_GUIDANCE} here. Other placeholders
+     * like {ANTI_HALLUCINATION_PROTOCOL} are not needed for agent selection
+     * since we want to answer purely based on conversation context provided.
+     */
+    protected function processSelectionPromptPlaceholders(string $systemPrompt): string
+    {
+        $directAnswerEnabled = config('promptly.direct_answer_enabled', false);
+
+        $directAnswerGuidance = $directAnswerEnabled
+            ? PromptPresets::directAnswerGuidance()
+            : '';
+
+        return str_replace(
+            '{DIRECT_ANSWER_GUIDANCE}',
+            $directAnswerGuidance,
+            $systemPrompt
+        );
     }
 }

@@ -311,7 +311,7 @@ class DynamicPromptService
         return $context;
     }
 
-    protected function generateConversationContext(?int $chatSessionId): ?string
+    public function generateConversationContext(?int $chatSessionId): ?string
     {
         if (! $chatSessionId) {
             return null;

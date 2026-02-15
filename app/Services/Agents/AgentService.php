@@ -402,7 +402,7 @@ class AgentService
                 'chat_session_id' => $chatSessionId,
                 'input' => $contextualInput,
                 'max_steps' => $agent->max_steps,
-                'status' => 'pending',
+                'state' => 'pending',
                 'parent_agent_execution_id' => $parentAgentExecutionId,
             ]);
 
@@ -552,16 +552,16 @@ class AgentService
         if ($execution->isRunning()) {
             // For running executions, we can only mark them for cancellation
             // The actual execution will need to check this status
-            $execution->update(['status' => 'cancelled']);
+            $execution->update(['state' => 'cancelled']);
 
             Log::info('Agent execution marked for cancellation', [
                 'execution_id' => $execution->id,
             ]);
 
             return true;
-        } elseif ($execution->status === 'pending') {
+        } elseif ($execution->state === 'pending') {
             // For pending executions, we can cancel immediately
-            $execution->update(['status' => 'cancelled']);
+            $execution->update(['state' => 'cancelled']);
 
             Log::info('Pending agent execution cancelled', [
                 'execution_id' => $execution->id,

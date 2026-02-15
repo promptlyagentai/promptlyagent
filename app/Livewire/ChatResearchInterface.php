@@ -1212,7 +1212,7 @@ class ChatResearchInterface extends BaseChatInterface
             'agent_id' => $agentId,
             'user_id' => auth()->id(),
             'input' => $question,
-            'status' => 'running',
+            'state' => 'running',
             'max_steps' => $maxSteps,
             'chat_session_id' => $this->currentSessionId,
         ]);
@@ -1270,7 +1270,7 @@ class ChatResearchInterface extends BaseChatInterface
         // Update execution if exists
         if ($execution) {
             $execution->update([
-                'status' => 'failed',
+                'state' => 'failed',
                 'error_message' => "{$context} error: ".$e->getMessage(),
                 'completed_at' => now(),
             ]);
@@ -2768,7 +2768,7 @@ class ChatResearchInterface extends BaseChatInterface
             'executions_details' => $executions->map(function ($exec) {
                 return [
                     'id' => $exec->id,
-                    'status' => $exec->status,
+                    'status' => $exec->state,
                     'agent_name' => $exec->agent->name ?? 'unknown',
                     'parent_id' => $exec->parent_agent_execution_id,
                 ];
@@ -2844,12 +2844,12 @@ class ChatResearchInterface extends BaseChatInterface
         // Also check if we have a running execution with an agentExecutionId saved already
         if ($this->agentExecutionId) {
             $activeExecution = \App\Models\AgentExecution::find($this->agentExecutionId);
-            if ($activeExecution && in_array($activeExecution->status, ['pending', 'running'])) {
+            if ($activeExecution && in_array($activeExecution->state, ['pending', 'running'])) {
                 // Also apply timeout check here
                 if ($activeExecution->updated_at > now()->subMinutes(20)) {
                     Log::info('ChatResearchInterface: Found active execution via agentExecutionId', [
                         'execution_id' => $this->agentExecutionId,
-                        'status' => $activeExecution->status,
+                        'status' => $activeExecution->state,
                     ]);
 
                     $this->blockingExecutionId = $activeExecution->id;
@@ -2858,7 +2858,7 @@ class ChatResearchInterface extends BaseChatInterface
                 } else {
                     Log::info('ChatResearchInterface: Ignoring stale execution via agentExecutionId', [
                         'execution_id' => $this->agentExecutionId,
-                        'status' => $activeExecution->status,
+                        'status' => $activeExecution->state,
                         'updated_at' => $activeExecution->updated_at,
                     ]);
                 }
@@ -3562,7 +3562,7 @@ class ChatResearchInterface extends BaseChatInterface
 
             \Log::info('ChatResearchInterface: Cancelling blocking execution', [
                 'execution_id' => $executionId,
-                'status' => $execution->status,
+                'status' => $execution->state,
                 'session_id' => $execution->chat_session_id,
             ]);
 
@@ -3861,7 +3861,7 @@ class ChatResearchInterface extends BaseChatInterface
                 $execution = $interaction->agentExecution;
                 $details['agent_execution'] = [
                     'id' => $execution->id,
-                    'status' => $execution->status,
+                    'status' => $execution->state,
                     'state' => $execution->state,
                     'input' => $execution->input,
                     'output' => $execution->output,
@@ -4580,6 +4580,6 @@ class ChatResearchInterface extends BaseChatInterface
     {
         return view('livewire.chat-research-interface', [
             'interactions' => $this->interactions,
-        ])->layout('components.layouts.app', ['title' => 'Research Chat']);
+        ])->layout('components.layouts.app', ['title' => 'Chat']);
     }
 }

@@ -34,8 +34,12 @@ class AgentSelectionSchema extends ObjectSchema
                     name: 'reasoning',
                     description: 'Specific reasons why this agent is optimal (capabilities, tools, domain match)'
                 ),
+                new StringSchema(
+                    name: 'directAnswer',
+                    description: 'Direct answer when confidence is very high and query is simple (empty string if delegating to agent)'
+                ),
             ],
-            requiredFields: ['analysis', 'selectedAgentId', 'selectedAgentName', 'confidence', 'reasoning']
+            requiredFields: ['analysis', 'selectedAgentId', 'selectedAgentName', 'confidence', 'reasoning', 'directAnswer']
         );
     }
 
@@ -50,6 +54,7 @@ class AgentSelectionSchema extends ObjectSchema
             'agent_name' => $structured['selectedAgentName'],
             'confidence' => $structured['confidence'],
             'reasoning' => $structured['reasoning'],
+            'direct_answer' => $structured['directAnswer'] ?? null,
         ];
     }
 }

@@ -560,7 +560,7 @@ class WorkflowOrchestrator
             'chat_session_id' => $parentExecution->chat_session_id,
             'input' => $node->input,
             'max_steps' => 25, // Increased from 5 to allow sufficient tool calls + synthesis
-            'status' => 'pending',
+            'state' => 'pending',
             'parent_agent_execution_id' => $parentExecution->id,
             'active_execution_key' => 'workflow_'.$parentExecution->id.'_job_'.$jobIndex, // Unique per workflow instance
             'metadata' => $metadata,

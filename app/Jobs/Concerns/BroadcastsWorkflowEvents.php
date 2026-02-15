@@ -57,12 +57,7 @@ trait BroadcastsWorkflowEvents
             // Dispatch event - Laravel will handle broadcasting via ShouldBroadcastNow
             event($event);
 
-            // Also explicitly broadcast to ensure delivery from job context
-            \Illuminate\Support\Facades\Broadcast::connection('reverb')
-                ->channel('chat-interaction.'.$interactionId)
-                ->broadcast('HolisticWorkflowCompleted', $event->broadcastWith());
-
-            Log::info('BroadcastsWorkflowEvents: Dispatched and explicitly broadcast HolisticWorkflowCompleted event');
+            Log::info('BroadcastsWorkflowEvents: Dispatched HolisticWorkflowCompleted event for broadcasting');
         } catch (Throwable $e) {
             Log::error('BroadcastsWorkflowEvents: Failed to broadcast holistic completion', [
                 'interaction_id' => $interactionId,
@@ -115,12 +110,7 @@ trait BroadcastsWorkflowEvents
             // Dispatch event - Laravel will handle broadcasting via ShouldBroadcastNow
             event($event);
 
-            // Also explicitly broadcast to ensure delivery from job context
-            \Illuminate\Support\Facades\Broadcast::connection('reverb')
-                ->channel('chat-interaction.'.$interactionId)
-                ->broadcast('ResearchComplete', $event->broadcastWith());
-
-            Log::info('BroadcastsWorkflowEvents: Dispatched and explicitly broadcast ResearchComplete event');
+            Log::info('BroadcastsWorkflowEvents: Dispatched ResearchComplete event for broadcasting');
         } catch (Throwable $e) {
             Log::error('BroadcastsWorkflowEvents: Failed to broadcast single-agent completion', [
                 'interaction_id' => $interactionId,
@@ -167,15 +157,10 @@ trait BroadcastsWorkflowEvents
                 $truncated['metadata']
             );
 
-            // Dispatch event
+            // Dispatch event - Laravel will handle broadcasting
             event($event);
 
-            // Also explicitly broadcast to ensure delivery from job context
-            \Illuminate\Support\Facades\Broadcast::connection('reverb')
-                ->channel('chat-interaction.'.$interactionId)
-                ->broadcast('ResearchComplete', $event->broadcastWith());
-
-            Log::info('BroadcastsWorkflowEvents: Dispatched and explicitly broadcast ResearchComplete event (static)');
+            Log::info('BroadcastsWorkflowEvents: Dispatched ResearchComplete event for broadcasting (static)');
         } catch (Throwable $e) {
             Log::error('BroadcastsWorkflowEvents: Failed to broadcast single-agent completion (static)', [
                 'interaction_id' => $interactionId,
@@ -289,15 +274,10 @@ trait BroadcastsWorkflowEvents
                 $steps
             );
 
-            // Dispatch event
+            // Dispatch event - Laravel will handle broadcasting
             event($event);
 
-            // Also explicitly broadcast to ensure delivery from job context
-            \Illuminate\Support\Facades\Broadcast::connection('reverb')
-                ->channel('chat-interaction.'.$interactionId)
-                ->broadcast('HolisticWorkflowCompleted', $event->broadcastWith());
-
-            Log::info('BroadcastsWorkflowEvents: Dispatched and explicitly broadcast HolisticWorkflowCompleted event (static)');
+            Log::info('BroadcastsWorkflowEvents: Dispatched HolisticWorkflowCompleted event for broadcasting (static)');
         } catch (Throwable $e) {
             Log::error('BroadcastsWorkflowEvents: Failed to broadcast holistic completion (static)', [
                 'interaction_id' => $interactionId,

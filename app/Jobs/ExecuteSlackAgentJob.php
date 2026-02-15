@@ -212,7 +212,7 @@ class ExecuteSlackAgentJob implements ShouldQueue
                 'execution_id' => $this->executionId,
                 'interaction_id' => $this->interactionId,
                 'integration_id' => $this->integrationId,
-                'status' => $execution->fresh()->status,
+                'status' => $execution->fresh()->state,
             ]);
 
         } catch (\Exception $e) {

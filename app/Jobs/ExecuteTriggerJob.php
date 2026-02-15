@@ -104,7 +104,7 @@ class ExecuteTriggerJob implements ShouldQueue
                 'user_id' => $trigger->user_id,
                 'chat_session_id' => $interaction->chat_session_id,
                 'input' => $interaction->question,
-                'status' => 'running',
+                'state' => 'running',
                 'max_steps' => $agent->max_steps,
                 'metadata' => array_merge(
                     $this->options['execution_metadata'] ?? [],
@@ -131,7 +131,7 @@ class ExecuteTriggerJob implements ShouldQueue
                 'trigger_id' => $this->triggerId,
                 'interaction_id' => $this->interactionId,
                 'execution_id' => $execution->id,
-                'status' => $execution->fresh()->status,
+                'status' => $execution->fresh()->state,
             ]);
 
         } catch (\Throwable $e) {

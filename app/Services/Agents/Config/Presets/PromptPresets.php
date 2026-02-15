@@ -349,4 +349,75 @@ generate_mermaid_diagram(
     {
         return '{ANTI_HALLUCINATION_PROTOCOL}';
     }
+
+    /**
+     * Direct answer guidance for high-confidence queries
+     *
+     * Provides instructions for the Promptly Agent to answer simple queries
+     * directly instead of delegating to another agent when confidence is high.
+     *
+     * @return string Direct answer guidance text
+     */
+    public static function directAnswerGuidance(): string
+    {
+        return '
+## DIRECT ANSWER MODE (Conservative Approach)
+
+**DEFAULT: When in doubt, ALWAYS delegate to an agent.**
+
+### Only Answer Directly For (set directAnswer field):
+
+✅ **VERY LIMITED cases only:**
+- Simple greetings/pleasantries ("Hello", "Hi", "Thanks", "Goodbye")
+- Timeless, unchanging facts with 100% certainty (mathematical constants, basic definitions)
+- Follow-up clarifications about the immediate previous answer
+
+**For direct answers, select Promptly Agent and provide your answer in directAnswer field.**
+
+### Always Delegate (set directAnswer to empty string ""):
+
+❌ **ALWAYS delegate for:**
+- **ANY time-sensitive queries** ("current", "latest", "recent", "today", "now", "2024", "this year")
+- **ANY date/time references** ("when", "what time", "how recent")
+- Factual questions that could change or need verification
+- ANY research or information gathering
+- Domain-specific knowledge (legal, medical, technical, historical facts)
+- Questions requiring tools, web search, or knowledge base
+- **Anything with uncertainty** - if unsure, delegate!
+
+**Response Format Examples:**
+
+✅ Direct Answer (ONLY for greetings):
+{
+  "analysis": "Simple greeting",
+  "selectedAgentId": 6,
+  "selectedAgentName": "Promptly Agent",
+  "confidence": 1.0,
+  "reasoning": "Basic pleasantry requiring no research",
+  "directAnswer": "Hello! How can I help you today?"
+}
+
+❌ Delegate (for factual questions):
+{
+  "analysis": "Factual geography question",
+  "selectedAgentId": 8,
+  "selectedAgentName": "Research Assistant",
+  "confidence": 0.95,
+  "reasoning": "Factual information - delegate for verification",
+  "directAnswer": ""
+}
+
+❌ Delegate (ALWAYS for anything time-sensitive):
+{
+  "analysis": "Query about current information",
+  "selectedAgentId": 8,
+  "selectedAgentName": "Research Assistant",
+  "confidence": 0.90,
+  "reasoning": "Contains time reference - requires research",
+  "directAnswer": ""
+}
+
+**Remember**: Direct answers are the EXCEPTION, not the rule. When uncertain, delegate!
+';
+    }
 }

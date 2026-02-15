@@ -88,7 +88,7 @@ class ExecuteAgentJob implements ShouldQueue
             Log::info('ExecuteAgentJob: Skipped - execution already terminal', [
                 'execution_id' => $this->execution->id,
                 'state' => $this->execution->state,
-                'status' => $this->execution->status,
+                'status' => $this->execution->state,
                 'job_uuid' => $this->job?->uuid(),
                 'completed_at' => $this->execution->completed_at,
             ]);
