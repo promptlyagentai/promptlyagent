@@ -50,8 +50,10 @@
 use Illuminate\Support\Facades\Auth;
 use Livewire\Volt\Component;
 
-new class extends Component {
+new class extends Component
+{
     public bool $enabled = false;
+
     public string $github_username = '';
 
     public function mount(): void
@@ -66,8 +68,8 @@ new class extends Component {
     public function updateHelpWidget(): void
     {
         $this->validate([
-            'enabled' => 'required|boolean',
-            'github_username' => 'nullable|string|max:39|regex:/^[a-zA-Z0-9](?:[a-zA-Z0-9]|-(?=[a-zA-Z0-9])){0,38}$/',
+            'enabled' => ['required', 'boolean'],
+            'github_username' => ['nullable', 'string', 'max:39', 'regex:/^[a-zA-Z0-9](?:[a-zA-Z0-9]|-(?=[a-zA-Z0-9])){0,38}$/'],
         ]);
 
         $user = Auth::user();
