@@ -11,18 +11,11 @@ PromptlyAgent is a Laravel-based framework that combines multi-agent AI orchestr
 
 ---
 
-## 📋 Dual License Model
+## 📸 Screenshots
 
-PromptlyAgent is available under a **dual-licensing model**:
+![PromptlyAgent Main Interface](screenshots/main-screen.png)
 
-- **🆓 MIT License** - For personal, academic, and non-commercial use
-- **💼 Commercial License** - Required for business and commercial use
-
-**Personal/non-commercial use** includes hobby projects, academic research, and internal use within non-profit organizations that doesn't generate revenue.
-
-**Commercial use** includes any for-profit entity, revenue-generating applications, production business operations, or services offered for a fee.
-
-📄 See the [LICENSE](LICENSE) file for complete terms, or contact **legal@promptlyagent.ai** for commercial licensing information.
+**[View More Screenshots →](screenshots/README.md)** - Explore the full feature set including agent management, knowledge system, artifacts, PWA, and more.
 
 ---
 
