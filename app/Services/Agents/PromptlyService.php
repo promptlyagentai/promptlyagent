@@ -72,7 +72,25 @@ class PromptlyService
         // 3. Use AI to select best agent (with context!)
         $selection = $this->selectAgentWithAI($query, $agents, $conversationContext);
 
-        // 4. Check if AI provided direct answer (and feature is enabled)
+        // 4. Validate selected agent exists FIRST (prevent hallucinations)
+        $selectedAgent = $agents->firstWhere('id', $selection['agent_id']);
+        if (! $selectedAgent) {
+            Log::warning('Promptly selected non-existent agent, using fallback', [
+                'attempted_id' => $selection['agent_id'],
+                'attempted_name' => $selection['agent_name'],
+                'available_agents' => $agents->pluck('name', 'id')->toArray(),
+            ]);
+
+            // Fallback to Research Assistant first, then any individual agent
+            $selectedAgent = $agents->firstWhere('name', 'Research Assistant')
+                ?? $agents->where('agent_type', 'individual')->first()
+                ?? $agents->first();
+
+            $selection['agent_id'] = $selectedAgent->id;
+            $selection['agent_name'] = $selectedAgent->name;
+        }
+
+        // 5. Check if AI provided direct answer (and feature is enabled)
         $directAnswerEnabled = config('promptly.direct_answer_enabled', false);
         if ($directAnswerEnabled && ! empty($selection['direct_answer'])) {
             Log::info('Promptly providing direct answer', [
@@ -112,6 +130,23 @@ class PromptlyService
                     'answer' => $selection['direct_answer'],
                     'agent_execution_id' => $execution->id,
                     'completed_at' => now(),
+                ]);
+
+                // CRITICAL: Broadcast events for PWA/API streaming
+                // Without these events, SSE streaming clients will timeout waiting for Redis events
+                \App\Services\EventStreamNotifier::interactionUpdated(
+                    $interactionId,
+                    $selection['direct_answer']
+                );
+
+                \App\Services\EventStreamNotifier::researchComplete(
+                    $interactionId,
+                    $selection['direct_answer']
+                );
+
+                Log::info('Promptly: Broadcasted direct answer events', [
+                    'interaction_id' => $interactionId,
+                    'execution_id' => $execution->id,
                 ]);
             }
 

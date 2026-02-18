@@ -36,7 +36,7 @@ class AgentSelectionSchema extends ObjectSchema
                 ),
                 new StringSchema(
                     name: 'directAnswer',
-                    description: 'Direct answer when confidence is very high and query is simple (empty string if delegating to agent)'
+                    description: 'The actual answer text to show the user if answering directly (e.g., greetings, facts from training/context). MUST be empty string "" if delegating to agent. NEVER put analysis or reasoning here - those go in separate fields. Use empty string "" in 95% of cases.'
                 ),
             ],
             requiredFields: ['analysis', 'selectedAgentId', 'selectedAgentName', 'confidence', 'reasoning', 'directAnswer']

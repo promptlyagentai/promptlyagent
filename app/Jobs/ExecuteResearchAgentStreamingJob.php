@@ -60,8 +60,62 @@ class ExecuteResearchAgentStreamingJob implements ShouldQueue
                 'execution_status' => $execution->status,
             ]);
 
-            // Execute with full pipeline (StatusReporter, container instances, etc.)
-            $result = $agentExecutor->execute($execution, $interaction->id);
+            // PROMPTLY AGENT ROUTING: If this is Promptly Agent, use AI-based agent selection
+            if ($execution->agent->name === 'Promptly Agent') {
+                Log::info('ExecuteResearchAgentStreamingJob: Detected Promptly Agent - routing through PromptlyService', [
+                    'execution_id' => $this->executionId,
+                    'interaction_id' => $this->interactionId,
+                    'query' => substr($execution->input, 0, 100),
+                ]);
+
+                // CRITICAL: Mark execution as executing before delegating to prevent race conditions
+                $execution->update([
+                    'state' => \App\Models\AgentExecution::STATE_EXECUTING,
+                    'started_at' => now(),
+                ]);
+
+                $promptlyService = app(\App\Services\Agents\PromptlyService::class);
+
+                // PromptlyService will select and execute the best agent
+                // Pass parent execution and interaction IDs so selected agent can access files and context
+                $selectedExecution = $promptlyService->execute(
+                    query: $execution->input,
+                    user: $execution->user,
+                    chatSessionId: $execution->chat_session_id,
+                    async: false, // Execute synchronously within this job
+                    parentExecutionId: $this->executionId,
+                    interactionId: $this->interactionId
+                );
+
+                // Wait for the selected agent to complete (it's synchronous)
+                $selectedExecution->refresh();
+
+                // Use the selected agent's result
+                $result = $selectedExecution->output;
+
+                // CRITICAL: Mark the parent Promptly execution as completed
+                // This prevents blocking further requests and triggers output actions
+                $execution->markAsCompleted(
+                    $result,
+                    array_merge($execution->fresh()->metadata ?? [], [
+                        'routed_to_agent_id' => $selectedExecution->agent_id,
+                        'routed_to_agent_name' => $selectedExecution->agent->name,
+                        'routed_execution_id' => $selectedExecution->id,
+                    ])
+                );
+
+                Log::info('ExecuteResearchAgentStreamingJob: Promptly routed to agent and completed', [
+                    'execution_id' => $this->executionId,
+                    'interaction_id' => $this->interactionId,
+                    'selected_agent_id' => $selectedExecution->agent_id,
+                    'selected_agent_name' => $selectedExecution->agent->name,
+                    'result_length' => strlen($result),
+                    'parent_execution_state' => $execution->fresh()->state,
+                ]);
+            } else {
+                // Execute with full pipeline (StatusReporter, container instances, etc.)
+                $result = $agentExecutor->execute($execution, $interaction->id);
+            }
 
             // Update interaction with result
             $interaction->update(['answer' => $result]);

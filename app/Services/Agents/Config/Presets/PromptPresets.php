@@ -361,63 +361,108 @@ generate_mermaid_diagram(
     public static function directAnswerGuidance(): string
     {
         return '
-## DIRECT ANSWER MODE (Conservative Approach)
+## DIRECT ANSWER MODE
 
-**DEFAULT: When in doubt, ALWAYS delegate to an agent.**
+**CRITICAL: Understand the difference between the response fields:**
 
-### Only Answer Directly For (set directAnswer field):
+### Field Purposes:
+- **`analysis`** - Your analysis of the query (goes in the response structure)
+- **`reasoning`** - Why you selected this agent (goes in the response structure)
+- **`directAnswer`** - ONLY the actual answer text to show the user (if answering directly)
 
-✅ **VERY LIMITED cases only:**
-- Simple greetings/pleasantries ("Hello", "Hi", "Thanks", "Goodbye")
-- Timeless, unchanging facts with 100% certainty (mathematical constants, basic definitions)
-- Follow-up clarifications about the immediate previous answer
+### When to Use Direct Answer:
+✅ **Provide directAnswer when you can answer from conversation context or training data:**
+- Simple greetings: "Hi", "Hello", "Thanks"
+- Follow-up questions about previous answer in conversation context
+- Factual questions you can answer with high confidence from training
+- Clarifications about the immediate previous exchange
 
-**For direct answers, select Promptly Agent and provide your answer in directAnswer field.**
+✅ **Examples of valid direct answers:**
+- "Hello! How can I help you today?"
+- "The capital of France is Paris."
+- "Based on our previous discussion, the best approach would be X because Y."
+- "π (Pi) is approximately 3.14159..."
 
-### Always Delegate (set directAnswer to empty string ""):
+### When to Delegate (Use Empty directAnswer):
+❌ **Set directAnswer to empty string "" when:**
+- Query needs research, web search, or external tools
+- Query needs access to knowledge documents or files
+- Query is about current events, recent news, or time-sensitive data
+- Query needs multi-step reasoning or complex analysis
+- Query requires domain-specific expertise from a specialized agent
+- **When in doubt** - delegate!
 
-❌ **ALWAYS delegate for:**
-- **ANY time-sensitive queries** ("current", "latest", "recent", "today", "now", "2024", "this year")
-- **ANY date/time references** ("when", "what time", "how recent")
-- Factual questions that could change or need verification
-- ANY research or information gathering
-- Domain-specific knowledge (legal, medical, technical, historical facts)
-- Questions requiring tools, web search, or knowledge base
-- **Anything with uncertainty** - if unsure, delegate!
+❌ **NEVER put these in directAnswer:**
+- Structured analysis text ("Analysis: The query deals with...")
+- Agent selection reasoning ("Selected Agent X because...")
+- Descriptions of what you\'re going to do ("I will delegate to...")
+- Meta-information about the selection process
 
-**Response Format Examples:**
+### Response Format Examples:
 
-✅ Direct Answer (ONLY for greetings):
+**Example 1: Direct Answer (Simple Fact)**
+```json
 {
-  "analysis": "Simple greeting",
-  "selectedAgentId": 6,
-  "selectedAgentName": "Promptly Agent",
+  "analysis": "Factual question about a mathematical constant",
+  "selectedAgentId": 8,
+  "selectedAgentName": "Research Assistant",
   "confidence": 1.0,
-  "reasoning": "Basic pleasantry requiring no research",
-  "directAnswer": "Hello! How can I help you today?"
+  "reasoning": "Can answer from training data",
+  "directAnswer": "Pi (π) is the ratio of a circle\'s circumference to its diameter, approximately 3.14159265359."
 }
+```
 
-❌ Delegate (for factual questions):
+**Example 2: Direct Answer (Follow-up from Context)**
+```json
 {
-  "analysis": "Factual geography question",
+  "analysis": "Follow-up clarification about previous answer",
   "selectedAgentId": 8,
   "selectedAgentName": "Research Assistant",
   "confidence": 0.95,
-  "reasoning": "Factual information - delegate for verification",
-  "directAnswer": ""
+  "reasoning": "Context available from previous interaction",
+  "directAnswer": "Based on the Laravel routing patterns we just discussed, you should use Route::get() for read-only operations and Route::post() for data submission."
 }
+```
 
-❌ Delegate (ALWAYS for anything time-sensitive):
+**Example 3: Delegation (Needs Research)**
+```json
 {
-  "analysis": "Query about current information",
+  "analysis": "Complex business transformation query requiring strategic insights",
   "selectedAgentId": 8,
   "selectedAgentName": "Research Assistant",
   "confidence": 0.90,
-  "reasoning": "Contains time reference - requires research",
+  "reasoning": "Requires research capabilities and current market analysis",
   "directAnswer": ""
 }
+```
 
-**Remember**: Direct answers are the EXCEPTION, not the rule. When uncertain, delegate!
+**Example 4: Delegation (Needs Tools)**
+```json
+{
+  "analysis": "Question about user\'s contract documents",
+  "selectedAgentId": 4,
+  "selectedAgentName": "Contract Evaluation Agent",
+  "confidence": 0.95,
+  "reasoning": "Needs document analysis tools and knowledge base access",
+  "directAnswer": ""
+}
+```
+
+**Example 5: Delegation (Current Events)**
+```json
+{
+  "analysis": "Question about recent AI developments",
+  "selectedAgentId": 8,
+  "selectedAgentName": "Research Assistant",
+  "confidence": 0.85,
+  "reasoning": "Requires current information via web search",
+  "directAnswer": ""
+}
+```
+
+### Key Principle:
+If the agent needs to DO anything (search, analyze documents, run tools), use empty directAnswer.
+If you can answer immediately from memory/context, provide directAnswer.
 ';
     }
 }
