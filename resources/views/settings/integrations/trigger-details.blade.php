@@ -194,6 +194,21 @@
                                 @enderror
                             </div>
 
+                            {{-- Agent Input Template (conditional - only for agent triggers) --}}
+                            <div x-show="triggerTargetType === 'agent'" x-cloak>
+                                <flux:textarea
+                                    name="agent_input_template"
+                                    label="Agent Input Template (Optional)"
+                                    placeholder="Transform webhook payload into agent input. Available variables: {{ $payload }}"
+                                    rows="4">{{ old('agent_input_template', $trigger->config['agent_input_template'] ?? '') }}</flux:textarea>
+                                <flux:text size="sm" class="mt-1 text-tertiary ">
+                                    Use Blade syntax to transform webhook data into agent input. Example: <code class="text-xs bg-surface-elevated px-1 py-0.5 rounded">New issue: {{ $payload['title'] ?? 'Untitled' }}</code>
+                                </flux:text>
+                                @error('agent_input_template')
+                                    <flux:text variant="danger" class="mt-1">{{ $message }}</flux:text>
+                                @enderror
+                            </div>
+
                             {{-- Workflow Configuration (conditional - only for workflow agents) --}}
                             <div x-show="triggerTargetType === 'agent' && selectedAgentType === 'workflow'" x-cloak>
                                 <flux:textarea

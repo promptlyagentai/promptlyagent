@@ -43,6 +43,11 @@
                         }">
                             @csrf
 
+                            {{-- Integration ID (if linked from integration details) --}}
+                            @if(isset($integrationId))
+                                <input type="hidden" name="integration_id" value="{{ $integrationId }}">
+                            @endif
+
                     {{-- Trigger Name --}}
                     <div>
                     <flux:input

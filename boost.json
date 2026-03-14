@@ -5,6 +5,9 @@
     "guidelines": true,
     "herd_mcp": false,
     "mcp": true,
+    "packages": [
+        "spatie/boost-spatie-guidelines"
+    ],
     "sail": true,
     "skills": [
         "fluxui-development",

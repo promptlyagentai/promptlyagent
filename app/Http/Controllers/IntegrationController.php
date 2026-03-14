@@ -757,7 +757,7 @@ class IntegrationController extends Controller
     /**
      * Show trigger creation form
      */
-    public function showCreateTrigger(string $providerId)
+    public function showCreateTrigger(Request $request, string $providerId)
     {
         $provider = $this->registry->get($providerId);
 
@@ -795,10 +795,14 @@ class IntegrationController extends Controller
         $triggerableCommandRegistry = app(\App\Services\InputTrigger\TriggerableCommandRegistry::class);
         $triggerableCommands = $triggerableCommandRegistry->getAll();
 
+        // Get integration_id from query parameter if provided
+        $integrationId = $request->query('integration_id');
+
         return view('settings.integrations.create-trigger', [
             'provider' => $provider,
             'agents' => $agents,
             'triggerableCommands' => $triggerableCommands,
+            'integrationId' => $integrationId,
         ]);
     }
 
@@ -827,6 +831,7 @@ class IntegrationController extends Controller
             'workflow_config' => ['nullable', 'string'], // JSON string for workflow configuration
             'ip_whitelist' => ['nullable', 'array', 'max:50'],
             'ip_whitelist.*' => ['string', 'regex:/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(?:\/([0-9]|[1-2][0-9]|3[0-2]))?$|^(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}(?:\/([0-9]|[1-9][0-9]|1[01][0-9]|12[0-8]))?$/'],
+            'integration_id' => ['nullable', 'exists:integrations,id'],
         ];
 
         // Allow providers to extend validation rules
@@ -944,6 +949,7 @@ class IntegrationController extends Controller
                     'per_hour' => 100,
                 ]) : null,
                 'ip_whitelist' => $requiresHttpSecurity ? ($validated['ip_whitelist'] ?? []) : null,
+                'integration_id' => $validated['integration_id'] ?? null,
             ]);
 
             // Generate credentials if needed
@@ -1101,6 +1107,7 @@ class IntegrationController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:1000'],
             'agent_id' => ['nullable', 'exists:agents,id'],
+            'agent_input_template' => ['nullable', 'string', 'max:5000'],
             'session_strategy' => ['nullable', 'in:new_each,continue_last'],
             'status' => ['required', 'in:active,paused,disabled'],
             'workflow_config' => ['nullable', 'string'],
@@ -1133,6 +1140,14 @@ class IntegrationController extends Controller
         } else {
             // Remove workflow config if empty
             unset($config['workflow_config']);
+        }
+
+        // Add agent input template if provided
+        if (! empty($validated['agent_input_template'])) {
+            $config['agent_input_template'] = $validated['agent_input_template'];
+        } else {
+            // Remove agent input template if empty
+            unset($config['agent_input_template']);
         }
 
         // Allow provider to prepare config from validated data
