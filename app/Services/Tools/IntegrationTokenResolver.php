@@ -5,6 +5,7 @@ namespace App\Services\Tools;
 use App\Models\Integration;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Integration Token Resolver - Runtime Integration Resolution for Tools.
@@ -71,8 +72,29 @@ class IntegrationTokenResolver
             );
         }
 
-        // Also validate the underlying token is active
-        if (! $integration->integrationToken->isActive()) {
+        // Attempt to refresh token if expired
+        $token = $integration->integrationToken;
+        if ($token->isExpired() && $token->refresh_token) {
+            try {
+                $provider = app(\App\Services\Integrations\ProviderRegistry::class)
+                    ->get($token->provider_id);
+
+                if ($provider) {
+                    $provider->refreshAccessToken($token);
+                    $token->refresh(); // Reload from database
+                }
+            } catch (\Exception $e) {
+                Log::warning('Failed to refresh token during resolution', [
+                    'integration_id' => $integrationId,
+                    'token_id' => $token->id,
+                    'error' => $e->getMessage(),
+                ]);
+                // Continue to validation - will fail with clear error if token still invalid
+            }
+        }
+
+        // Validate the underlying token is active (after refresh attempt)
+        if (! $token->isActive()) {
             throw new ModelNotFoundException(
                 "Integration token is not active for integration: {$integrationId}"
             );
@@ -94,7 +116,8 @@ class IntegrationTokenResolver
     ): void {
         // Validate capability through Integration model
         // This checks both enabled capabilities and token scope availability
-        $integration->validateCapability($capability);
+        // Pass the current user from execution context to avoid auth()->user() returning null in queue jobs
+        $integration->validateCapability($capability, $this->getCurrentUser());
     }
 
     /**
