@@ -351,78 +351,104 @@ new class extends Component
     @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     <script>
-        document.addEventListener('livewire:initialized', () => {
+        // QR code generation functions need to be available across navigation
+        const initPwaQrListeners = () => {
             let setupQrGenerated = false;
             let tokenQrGenerated = false;
 
             // Generate setup URL QR (Step 1)
             const generateSetupQr = (setupUrl, qrData) => {
-                if (setupQrGenerated) return;
+                // Wait for modal to be rendered
+                const waitForContainer = (attempts = 0) => {
+                    const container = document.getElementById('setup-qrcode');
 
-                const container = document.getElementById('setup-qrcode');
-                if (!container || container.offsetParent === null) {
-                    return; // Container not visible yet
-                }
+                    if (!container && attempts < 10) {
+                        setTimeout(() => waitForContainer(attempts + 1), 100);
+                        return;
+                    }
 
-                console.log('Generating setup QR - setupUrl:', setupUrl);
-                console.log('Generating setup QR - qrData:', qrData);
+                    if (!container) {
+                        console.error('Setup QR container not found after waiting');
+                        return;
+                    }
 
-                if (!setupUrl) {
-                    console.error('No setup URL provided');
-                    return;
-                }
+                    if (setupQrGenerated && container.querySelector('canvas')) {
+                        return; // Already generated
+                    }
 
-                container.innerHTML = '';
+                    console.log('Generating setup QR - setupUrl:', setupUrl);
 
-                new QRCode(container, {
-                    text: setupUrl,
-                    width: 256,
-                    height: 256,
-                    colorDark: '#000000',
-                    colorLight: '#ffffff',
-                    correctLevel: QRCode.CorrectLevel.H
-                });
+                    if (!setupUrl) {
+                        console.error('No setup URL provided');
+                        return;
+                    }
 
-                setupQrGenerated = true;
-                console.log('Setup QR code generated successfully');
+                    container.innerHTML = '';
+
+                    new QRCode(container, {
+                        text: setupUrl,
+                        width: 256,
+                        height: 256,
+                        colorDark: '#000000',
+                        colorLight: '#ffffff',
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
+
+                    setupQrGenerated = true;
+                    console.log('Setup QR code generated successfully');
+                };
+
+                waitForContainer();
             };
 
             // Generate token QR (Step 2)
             const generateTokenQr = (qrData) => {
-                if (tokenQrGenerated) return;
+                // Wait for modal to be rendered
+                const waitForContainer = (attempts = 0) => {
+                    const container = document.getElementById('token-qrcode');
 
-                const container = document.getElementById('token-qrcode');
-                if (!container || container.offsetParent === null) {
-                    return; // Container not visible yet
-                }
+                    if (!container && attempts < 10) {
+                        setTimeout(() => waitForContainer(attempts + 1), 100);
+                        return;
+                    }
 
-                console.log('Generating token QR - qrData:', qrData);
+                    if (!container) {
+                        console.error('Token QR container not found after waiting');
+                        return;
+                    }
 
-                if (!qrData || Object.keys(qrData).length === 0) {
-                    console.error('No token data provided');
-                    return;
-                }
+                    if (tokenQrGenerated && container.querySelector('canvas')) {
+                        return; // Already generated
+                    }
 
-                container.innerHTML = '';
+                    console.log('Generating token QR - qrData:', qrData);
 
-                new QRCode(container, {
-                    text: JSON.stringify(qrData),
-                    width: 256,
-                    height: 256,
-                    colorDark: '#000000',
-                    colorLight: '#ffffff',
-                    correctLevel: QRCode.CorrectLevel.H
-                });
+                    if (!qrData || Object.keys(qrData).length === 0) {
+                        console.error('No token data provided');
+                        return;
+                    }
 
-                tokenQrGenerated = true;
-                console.log('Token QR code generated successfully');
+                    container.innerHTML = '';
+
+                    new QRCode(container, {
+                        text: JSON.stringify(qrData),
+                        width: 256,
+                        height: 256,
+                        colorDark: '#000000',
+                        colorLight: '#ffffff',
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
+
+                    tokenQrGenerated = true;
+                    console.log('Token QR code generated successfully');
+                };
+
+                waitForContainer();
             };
 
             // Listen for events with data
-            // Livewire v3 passes all params as array elements
             Livewire.on('pwa-qr-generated', (event) => {
                 console.log('PWA QR generated event received');
-                console.log('Event (raw):', event);
 
                 // Event is an array: [setupUrl, qrData]
                 const setupUrl = Array.isArray(event) ? event[0] : event;
@@ -432,12 +458,11 @@ new class extends Component
                 console.log('Extracted - qrData:', qrData);
 
                 setupQrGenerated = false; // Reset flag
-                setTimeout(() => generateSetupQr(setupUrl, qrData), 150);
+                generateSetupQr(setupUrl, qrData);
             });
 
             Livewire.on('pwa-token-qr-generated', (event) => {
                 console.log('PWA token QR generated event received');
-                console.log('Event (raw):', event);
 
                 // Event is the qrData object (single param)
                 const qrData = Array.isArray(event) ? event[0] : event;
@@ -445,9 +470,13 @@ new class extends Component
                 console.log('Extracted - qrData:', qrData);
 
                 tokenQrGenerated = false; // Reset flag
-                setTimeout(() => generateTokenQr(qrData), 150);
+                generateTokenQr(qrData);
             });
-        });
+        };
+
+        // Initialize on both first load and after Livewire navigation
+        document.addEventListener('livewire:initialized', initPwaQrListeners);
+        document.addEventListener('livewire:navigated', initPwaQrListeners);
     </script>
     @endpush
 </section>
