@@ -240,7 +240,29 @@
         @endif
 
         <!-- Agent Dropdown -->
-        <div class="flex-shrink-0" x-data="{ open: false }" @click.outside="open = false">
+        <div class="flex-shrink-0" x-data="{
+            open: false,
+            scrollToSelected() {
+                this.$nextTick(() => {
+                    const container = this.$refs.agentList;
+                    const selected = container?.querySelector('[data-selected=true]');
+                    if (selected && container) {
+                        const containerRect = container.getBoundingClientRect();
+                        const selectedRect = selected.getBoundingClientRect();
+                        const relativeTop = selected.offsetTop - container.offsetTop;
+                        const isVisible =
+                            relativeTop >= container.scrollTop &&
+                            relativeTop + selectedRect.height <= container.scrollTop + containerRect.height;
+
+                        if (!isVisible) {
+                            container.scrollTop = relativeTop - (containerRect.height / 2) + (selectedRect.height / 2);
+                        }
+                    }
+                });
+            }
+        }"
+        @click.outside="open = false"
+        x-init="$watch('open', value => { if (value) scrollToSelected(); })">
             <div class="relative">
                 <button type="button" @click="open = !open" class="flex items-center justify-between w-36 px-3 py-2 text-sm font-medium text-secondary bg-surface border border-default rounded-lg hover:opacity-90">
                     <span class="truncate">{{ $researchAgents[$selectedAgent] ?? 'Chat with AI' }}</span>
@@ -261,64 +283,7 @@
                     <div class="p-3 border-b border-default ">
                         <h4 class="text-sm font-medium text-primary ">Select Mode</h4>
                     </div>
-                    <div class="py-2">
-                        <!-- Chat with AI (Directly Agent) Option -->
-                        <button type="button"
-                                wire:click="$set('selectedAgent', 'directly')"
-                                @click="open = false"
-                                class="w-full px-4 py-2 text-left hover:bg-surface flex items-center gap-3 {{ $selectedAgent === 'directly' ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300' : 'text-secondary' }}">
-                            <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155"/>
-                            </svg>
-                            <div class="flex-1 min-w-0">
-                                <div class="font-medium">Chat with AI</div>
-                                <div class="text-xs text-tertiary">Real-time chat with AI responses</div>
-                            </div>
-                            @if($selectedAgent === 'directly')
-                                <svg class="w-4 h-4 text-accent" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
-                                </svg>
-                            @endif
-                        </button>
-
-                        <!-- Promptly Agent Option - DEFAULT -->
-                        <button type="button"
-                                wire:click="$set('selectedAgent', 'promptly')"
-                                @click="open = false"
-                                class="w-full px-4 py-2 text-left hover:bg-surface flex items-center gap-3 {{ ($selectedAgent === 'promptly' || !$selectedAgent) ? 'bg-accent/10 text-accent' : 'text-secondary ' }}">
-                            <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
-                            </svg>
-                            <div class="flex-1 min-w-0">
-                                <div class="font-medium">Promptly Agent</div>
-                                <div class="text-xs text-tertiary">Intelligent Agent selection</div>
-                            </div>
-                            @if($selectedAgent === 'promptly' || !$selectedAgent)
-                                <svg class="w-4 h-4 text-accent" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
-                                </svg>
-                            @endif
-                        </button>
-
-                        <!-- Deeply Agent Option -->
-                        <button type="button"
-                                wire:click="$set('selectedAgent', 'deeply')"
-                                @click="open = false"
-                                class="w-full px-4 py-2 text-left hover:bg-surface flex items-center gap-3 {{ $selectedAgent === 'deeply' ? 'bg-accent/10 text-accent' : 'text-secondary ' }}">
-                            <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 3v1.5M4.5 8.25H3m18 0h-1.5M4.5 12H3m18 0h-1.5m-15 3.75H3m18 0h-1.5M8.25 19.5V21M12 3v1.5m0 15V21m3.75-18v1.5m0 15V21m-9-1.5h10.5a2.25 2.25 0 002.25-2.25V6.75a2.25 2.25 0 00-2.25-2.25H6.75A2.25 2.25 0 004.5 6.75v10.5a2.25 2.25 0 002.25 2.25zm.75-12h9v9h-9v-9z"/>
-                            </svg>
-                            <div class="flex-1 min-w-0">
-                                <div class="font-medium">Deeply Agent</div>
-                                <div class="text-xs text-tertiary">Fully automatic AI workflows</div>
-                            </div>
-                            @if($selectedAgent === 'deeply')
-                                <svg class="w-4 h-4 text-accent" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
-                                </svg>
-                            @endif
-                        </button>
-
+                    <div class="py-2 max-h-96 overflow-y-auto" x-ref="agentList">
                         @if(count($researchAgents) > 1)
                             @php
                                 $workflows = [];
@@ -334,7 +299,6 @@
                             @endphp
 
                             @if(!empty($workflows))
-                                <div class="border-t border-default  my-2"></div>
                                 <div class="px-4 py-1">
                                     <div class="text-xs font-medium text-tertiary uppercase tracking-wider">Workflows</div>
                                 </div>
@@ -343,6 +307,7 @@
                                     <button type="button"
                                             wire:click="$set('selectedAgent', '{{ $agent['id'] }}')"
                                             @click="open = false"
+                                            data-selected="{{ $selectedAgent == $agent['id'] ? 'true' : 'false' }}"
                                             class="w-full px-4 py-2 text-left hover:bg-surface flex items-center gap-3 {{ $selectedAgent == $agent['id'] ? 'bg-accent/10 text-accent' : 'text-secondary ' }}">
                                         <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14-7l2 2-2 2m2-2H9m10 7l2 2-2 2m2-2H9"/>
@@ -363,10 +328,10 @@
                                         @endif
                                     </button>
                                 @endforeach
+                                <div class="border-t border-default  my-2"></div>
                             @endif
 
                             @if(!empty($individualAgents))
-                                <div class="border-t border-default  my-2"></div>
                                 <div class="px-4 py-1">
                                     <div class="text-xs font-medium text-tertiary uppercase tracking-wider">Agents</div>
                                 </div>
@@ -375,6 +340,7 @@
                                     <button type="button"
                                             wire:click="$set('selectedAgent', '{{ $agent['id'] }}')"
                                             @click="open = false"
+                                            data-selected="{{ $selectedAgent == $agent['id'] ? 'true' : 'false' }}"
                                             class="w-full px-4 py-2 text-left hover:bg-surface flex items-center gap-3 {{ $selectedAgent == $agent['id'] ? 'bg-success text-success-contrast' : 'text-secondary ' }}">
                                         <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z"/>
@@ -395,12 +361,70 @@
                                         @endif
                                     </button>
                                 @endforeach
+                                <div class="border-t border-default my-2"></div>
                             @endif
-                        @else
-                            <div class="px-4 py-3 text-sm text-tertiary">
-                                No agents available
-                            </div>
                         @endif
+
+                        <!-- Main Modes (at bottom, close to selector) -->
+                        <!-- Chat with AI (Directly Agent) Option -->
+                        <button type="button"
+                                wire:click="$set('selectedAgent', 'directly')"
+                                @click="open = false"
+                                data-selected="{{ $selectedAgent === 'directly' ? 'true' : 'false' }}"
+                                class="w-full px-4 py-2 text-left hover:bg-surface flex items-center gap-3 {{ $selectedAgent === 'directly' ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300' : 'text-secondary' }}">
+                            <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155"/>
+                            </svg>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium">Chat with AI</div>
+                                <div class="text-xs text-tertiary">Real-time chat with AI responses</div>
+                            </div>
+                            @if($selectedAgent === 'directly')
+                                <svg class="w-4 h-4 text-accent" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                                </svg>
+                            @endif
+                        </button>
+
+                        <!-- Promptly Agent Option - DEFAULT -->
+                        <button type="button"
+                                wire:click="$set('selectedAgent', 'promptly')"
+                                @click="open = false"
+                                data-selected="{{ ($selectedAgent === 'promptly' || !$selectedAgent) ? 'true' : 'false' }}"
+                                class="w-full px-4 py-2 text-left hover:bg-surface flex items-center gap-3 {{ ($selectedAgent === 'promptly' || !$selectedAgent) ? 'bg-accent/10 text-accent' : 'text-secondary ' }}">
+                            <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                            </svg>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium">Promptly Agent</div>
+                                <div class="text-xs text-tertiary">Intelligent Agent selection</div>
+                            </div>
+                            @if($selectedAgent === 'promptly' || !$selectedAgent)
+                                <svg class="w-4 h-4 text-accent" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                                </svg>
+                            @endif
+                        </button>
+
+                        <!-- Deeply Agent Option -->
+                        <button type="button"
+                                wire:click="$set('selectedAgent', 'deeply')"
+                                @click="open = false"
+                                data-selected="{{ $selectedAgent === 'deeply' ? 'true' : 'false' }}"
+                                class="w-full px-4 py-2 text-left hover:bg-surface flex items-center gap-3 {{ $selectedAgent === 'deeply' ? 'bg-accent/10 text-accent' : 'text-secondary ' }}">
+                            <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 3v1.5M4.5 8.25H3m18 0h-1.5M4.5 12H3m18 0h-1.5m-15 3.75H3m18 0h-1.5M8.25 19.5V21M12 3v1.5m0 15V21m3.75-18v1.5m0 15V21m-9-1.5h10.5a2.25 2.25 0 002.25-2.25V6.75a2.25 2.25 0 00-2.25-2.25H6.75A2.25 2.25 0 004.5 6.75v10.5a2.25 2.25 0 002.25 2.25zm.75-12h9v9h-9v-9z"/>
+                            </svg>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium">Deeply Agent</div>
+                                <div class="text-xs text-tertiary">Fully automatic AI workflows</div>
+                            </div>
+                            @if($selectedAgent === 'deeply')
+                                <svg class="w-4 h-4 text-accent" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                                </svg>
+                            @endif
+                        </button>
                     </div>
                 </div>
             </div>

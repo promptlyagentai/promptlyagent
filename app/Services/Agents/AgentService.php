@@ -7,7 +7,12 @@ use App\Models\Agent;
 use App\Models\AgentExecution;
 use App\Models\ChatInteraction;
 use App\Models\User;
+use App\Services\Agents\Config\AbstractAgentConfig;
+use App\Services\Agents\Config\AgentConfigRegistry;
+use App\Services\Agents\Schemas\QAValidationSchema;
+use App\Services\Agents\Schemas\WorkflowPlanSchema;
 use App\Services\AI\ModelSelector;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -63,11 +68,11 @@ use Illuminate\Support\Facades\Log;
  * - Workflow orchestrators: Multi-agent coordination
  * - Custom agents: User-defined instructions + tools
  *
- * @see \App\Jobs\ExecuteAgentJob
- * @see \App\Services\Agents\AgentExecutor
- * @see \App\Services\Agents\ToolRegistry
- * @see \App\Services\Agents\AgentKnowledgeService
- * @see \App\Models\Agent
+ * @see ExecuteAgentJob
+ * @see AgentExecutor
+ * @see ToolRegistry
+ * @see AgentKnowledgeService
+ * @see Agent
  */
 class AgentService
 {
@@ -234,7 +239,7 @@ class AgentService
 
     protected ToolRegistry $toolRegistry;
 
-    protected ?\App\Services\Agents\Config\AgentConfigRegistry $configRegistry = null;
+    protected ?AgentConfigRegistry $configRegistry = null;
 
     public function __construct(?ToolRegistry $toolRegistry = null)
     {
@@ -249,11 +254,11 @@ class AgentService
     /**
      * Create agent from configuration class
      *
-     * @param  \App\Services\Agents\Config\AbstractAgentConfig  $config  Agent configuration
+     * @param  AbstractAgentConfig  $config  Agent configuration
      * @param  User  $creator  User creating the agent
      * @return Agent Created agent instance
      */
-    public function createFromConfig(\App\Services\Agents\Config\AbstractAgentConfig $config, User $creator): Agent
+    public function createFromConfig(AbstractAgentConfig $config, User $creator): Agent
     {
         $agentData = $config->toArray();
         $toolConfig = $config->getToolConfiguration();
@@ -272,7 +277,7 @@ class AgentService
      */
     public function createFromIdentifier(string $identifier, User $creator): Agent
     {
-        $this->configRegistry = $this->configRegistry ?? app(\App\Services\Agents\Config\AgentConfigRegistry::class);
+        $this->configRegistry = $this->configRegistry ?? app(AgentConfigRegistry::class);
 
         $config = $this->configRegistry->get($identifier);
 
@@ -431,7 +436,7 @@ class AgentService
                 }
             }
 
-        } catch (\Illuminate\Database\QueryException $e) {
+        } catch (QueryException $e) {
             // Handle unique constraint violations (duplicate execution prevention)
             $errorMessage = $e->getMessage();
             $isDuplicateConstraint = false;
@@ -637,8 +642,11 @@ class AgentService
     public function duplicateAgent(Agent $sourceAgent, User $creator): Agent
     {
         return DB::transaction(function () use ($sourceAgent, $creator) {
+            // Generate unique suffix to prevent slug conflicts when multiple users duplicate the same agent
+            $uniqueSuffix = Str::random(5);
+
             $data = [
-                'name' => $sourceAgent->name.' (Copy)',
+                'name' => $sourceAgent->name.' (Copy '.$uniqueSuffix.')',
                 'description' => $sourceAgent->description,
                 'system_prompt' => $sourceAgent->system_prompt,
                 'ai_provider' => $sourceAgent->ai_provider,
@@ -1364,7 +1372,7 @@ You must output a structured workflow plan with:
             'show_in_chat' => false, // Internal workflow orchestrator, not user-facing
             'available_for_research' => true, // Available for Promptly to select for complex queries
             'workflow_config' => [
-                'schema_class' => \App\Services\Agents\Schemas\WorkflowPlanSchema::class,
+                'schema_class' => WorkflowPlanSchema::class,
                 'output_format' => 'structured',
             ],
         ], $this->addCommonTools([
@@ -1736,7 +1744,7 @@ Remember: Your role is quality assurance, not content creation. Validate rigorou
             'description' => 'Quality assurance validator that rigorously verifies synthesized research results meet all user requirements and identifies gaps needing additional research',
             'system_prompt' => $this->buildQAValidatorPrompt(),
             'workflow_config' => [
-                'schema_class' => \App\Services\Agents\Schemas\QAValidationSchema::class,
+                'schema_class' => QAValidationSchema::class,
             ],
             'ai_provider' => app(ModelSelector::class)->getComplexModel()['provider'],
             'ai_model' => app(ModelSelector::class)->getComplexModel()['model'], // Enhanced model for rigorous analysis

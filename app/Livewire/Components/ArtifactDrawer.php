@@ -2,13 +2,16 @@
 
 namespace App\Livewire\Components;
 
+use App\Jobs\ConvertArtifactToPandoc;
 use App\Models\Artifact;
 use App\Models\ArtifactIntegration;
+use App\Models\ArtifactVersion;
 use App\Models\Integration;
 use App\Models\KnowledgeDocument;
 use App\Services\Artifacts\ArtifactIntegrationManager;
 use App\Services\Integrations\Contracts\ArtifactStorageProvider;
 use App\Services\Integrations\ProviderRegistry;
+use Illuminate\Database\QueryException;
 use Livewire\Component;
 
 class ArtifactDrawer extends Component
@@ -211,7 +214,7 @@ class ArtifactDrawer extends Component
         // Create version before modifying content
         try {
             $this->artifact->createVersion();
-        } catch (\Illuminate\Database\QueryException $e) {
+        } catch (QueryException $e) {
             // Handle duplicate version constraint violation gracefully
             if ($e->errorInfo[1] === 1062) { // MySQL duplicate entry error
                 \Log::warning('ArtifactDrawer: Duplicate version detected', [
@@ -356,7 +359,7 @@ class ArtifactDrawer extends Component
 
         try {
             // Create knowledge document from artifact
-            $knowledgeDocument = \App\Models\KnowledgeDocument::create([
+            $knowledgeDocument = KnowledgeDocument::create([
                 'title' => $this->artifact->title,
                 'description' => $this->artifact->description ?? 'Created from artifact',
                 'content' => $this->artifact->content,
@@ -499,7 +502,7 @@ class ArtifactDrawer extends Component
             return;
         }
 
-        $version = \App\Models\ArtifactVersion::find($versionId);
+        $version = ArtifactVersion::find($versionId);
 
         if (! $version || $version->artifact_id !== $this->artifact->id) {
             $this->dispatch('notify', [
@@ -538,21 +541,8 @@ class ArtifactDrawer extends Component
             ? $this->viewingVersion['content']
             : ($this->artifact->content ?? '');
 
-        // Resolve internal URLs (asset:// and attachment:) if artifact is markdown
-        if ($this->artifact && in_array($this->artifact->filetype, ['md', 'markdown'])) {
-            $resolver = app(MarkdownUrlResolver::class);
-
-            // Use artifact author for user-scoped lookups (artifacts may not have interaction context)
-            $userId = $this->artifact->author_id ?? auth()->id();
-            $resolver->setUser($userId);
-
-            // If artifact has chat_interaction_id, use it for more precise lookups
-            if ($this->artifact->chat_interaction_id) {
-                $resolver->setInteractionId($this->artifact->chat_interaction_id);
-            }
-
-            $content = $resolver->resolve($content);
-        }
+        // Client-side marked.js handles internal URL resolution (asset://, attachment://)
+        // No server-side URL resolution needed for browser display
 
         return $content;
     }
@@ -1054,7 +1044,7 @@ class ArtifactDrawer extends Component
                 ]);
 
                 // Dispatch job
-                \App\Jobs\ConvertArtifactToPandoc::dispatch($conversion);
+                ConvertArtifactToPandoc::dispatch($conversion);
 
                 $this->dispatch('notify', [
                     'message' => 'PDF conversion queued! You\'ll receive a notification with a download link when it\'s ready.',

@@ -87,6 +87,17 @@ PromptlyAgent is built with a modular architecture designed for scalability and 
 Before you begin, ensure you have:
 
 ✅ **Docker Desktop** (Mac/Windows) or **Docker Engine + Docker Compose** (Linux)
+   - **Linux/Windows users**: Ensure your user is in the `docker` group to run Docker without `sudo`:
+     ```bash
+     # Add user to docker group (Linux)
+     sudo usermod -aG docker $USER
+
+     # Log out and back in for changes to take effect, or run:
+     newgrp docker
+
+     # Verify docker works without sudo:
+     docker ps
+     ```
 ✅ **Git** for cloning the repository
 ✅ **AI Provider API Key** - At least one of:
    - [OpenAI API Key](https://platform.openai.com/api-keys) (GPT models)

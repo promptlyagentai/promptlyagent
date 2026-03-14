@@ -9,6 +9,17 @@ Before you begin, ensure you have the following installed:
 - **Docker Desktop** (or Docker Engine + Docker Compose)
   - [Download Docker Desktop](https://www.docker.com/products/docker-desktop)
   - Ensure Docker is running before proceeding
+  - **Linux/Windows users**: Ensure your user is in the `docker` group:
+    ```bash
+    # Add user to docker group
+    sudo usermod -aG docker $USER
+
+    # Log out and back in, or run:
+    newgrp docker
+
+    # Verify docker works without sudo:
+    docker ps
+    ```
 - **Git** for cloning the repository
 - **Terminal** access (Terminal on macOS/Linux, PowerShell/WSL on Windows)
 

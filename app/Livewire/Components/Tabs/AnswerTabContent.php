@@ -4,6 +4,7 @@ namespace App\Livewire\Components\Tabs;
 
 use App\Models\ChatInteraction;
 use App\Services\InlineLinkProcessor;
+use Illuminate\Support\Str;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -27,20 +28,16 @@ class AnswerTabContent extends Component
         if ($interaction && $interaction->answer) {
             $this->rawResponse = $interaction->answer;
 
-            // Resolve internal URLs (asset:// and attachment:)
-            $resolver = app(MarkdownUrlResolver::class);
-            $resolver->setUser(auth()->id())
-                ->setInteractionId($this->interactionId)
-                ->setChatSessionId($interaction->chat_session_id);
-
-            $resolvedMarkdown = $resolver->resolve($interaction->answer);
+            // Client-side marked.js handles internal URL resolution (asset://, attachment://)
+            // No server-side URL resolution needed for browser display
+            $markdown = $interaction->answer;
 
             if ($interaction->execution) {
                 $processor = app(InlineLinkProcessor::class);
-                $processedMarkdown = $processor->processAgentResponse($resolvedMarkdown, $interaction->execution);
+                $processedMarkdown = $processor->processAgentResponse($markdown, $interaction->execution);
                 $this->processedResponse = $processor->enrichMarkdownForDisplay($processedMarkdown);
             } else {
-                $this->processedResponse = \Illuminate\Support\Str::markdown($resolvedMarkdown);
+                $this->processedResponse = Str::markdown($markdown);
             }
         }
     }

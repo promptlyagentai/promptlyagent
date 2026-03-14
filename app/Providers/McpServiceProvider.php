@@ -41,6 +41,18 @@ class McpServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Skip validation during fresh installation (before migrations run)
+        // This prevents database-related errors when starting the app for the first time
+        try {
+            \Illuminate\Support\Facades\DB::connection()->getPdo();
+        } catch (\Exception $e) {
+            Log::debug('MCP validation skipped: database not available', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return;
+        }
+
         // Only validate if relay config exists
         if (! config()->has('relay.servers')) {
             return;

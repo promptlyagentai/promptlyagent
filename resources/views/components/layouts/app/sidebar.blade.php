@@ -186,6 +186,7 @@
                             agentId: {{ $agentId }},
                             position: 'bottom-right',
                             primaryColor: accentColor,
+                            bugReportEnabled: {{ config('github.bug_report.enabled') ? 'true' : 'false' }},
                             debug: true  // Enable debug logging
                         });
                     }

@@ -110,8 +110,9 @@
                     Indexing Status
                 </flux:heading>
                 <div class="flex items-center space-x-2">
-                    <flux:button wire:click="loadEmbeddingStatistics" variant="ghost" size="sm" icon="arrow-path">
-                        Refresh
+                    <flux:button wire:click="loadEmbeddingStatistics(true)" variant="ghost" size="sm" icon="arrow-path" wire:loading.attr="disabled">
+                        <span wire:loading.remove wire:target="loadEmbeddingStatistics">Refresh</span>
+                        <span wire:loading wire:target="loadEmbeddingStatistics">Refreshing...</span>
                     </flux:button>
                     @if(!empty($embeddingStatistics) && $embeddingStatistics['embedding_service_enabled'] && $embeddingStatistics['without_embeddings'] > 0)
                         <flux:button wire:click="regenerateEmbeddings" variant="primary" size="sm" icon="play">
@@ -126,7 +127,14 @@
                 </div>
             </div>
 
-            @if(!empty($embeddingStatistics))
+            @if($embeddingStatisticsLoading)
+                <div class="flex items-center justify-center py-12">
+                    <div class="text-center">
+                        <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-accent mb-4"></div>
+                        <div class="text-tertiary">Loading embedding statistics...</div>
+                    </div>
+                </div>
+            @elseif(!empty($embeddingStatistics))
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                     <!-- Total Documents -->
                     <div class="bg-surface rounded-lg p-4 ">
@@ -201,8 +209,20 @@
                     </div>
                 @endif
             @else
-                <div class="text-center py-4">
-                    <flux:button wire:click="loadEmbeddingStatistics" variant="primary">
+                <div class="text-center py-8">
+                    <div class="text-tertiary mb-4">
+                        @if(isset($embeddingStatistics['error']))
+                            <flux:icon.exclamation-triangle class="w-12 h-12 mx-auto mb-2 text-[var(--palette-error-500)]" />
+                            <div class="text-[var(--palette-error-700)]">{{ $embeddingStatistics['error'] }}</div>
+                        @elseif(isset($embeddingStatistics['total_documents']) && $embeddingStatistics['total_documents'] === 0)
+                            <flux:icon.document-plus class="w-12 h-12 mx-auto mb-2 opacity-50" />
+                            <div>No knowledge documents found. Add some documents to see indexing statistics.</div>
+                        @else
+                            <flux:icon.cpu-chip class="w-12 h-12 mx-auto mb-2 opacity-50" />
+                            <div>Click below to load embedding statistics</div>
+                        @endif
+                    </div>
+                    <flux:button wire:click="loadEmbeddingStatistics" variant="primary" size="sm">
                         Load Embedding Statistics
                     </flux:button>
                 </div>
@@ -476,10 +496,15 @@
                                     @php
                                         $indexingStatus = $this->getDocumentIndexingStatus($document);
                                         $relevanceScore = $this->getDocumentRelevanceScore($document);
+                                        $statusColorClass = match($indexingStatus['color']) {
+                                            'green' => 'text-[var(--palette-success-700)]',
+                                            'yellow' => 'text-[var(--palette-warning-700)]',
+                                            default => 'text-[var(--palette-error-700)]',
+                                        };
                                     @endphp
-                                    
+
                                     <div class="flex items-center space-x-2">
-                                        <flux:text size="xs" class="@if($indexingStatus['color'] === 'green') text-[var(--palette-success-700)] @elseif($indexingStatus['color'] === 'yellow') text-[var(--palette-warning-700)] @else text-[var(--palette-error-700)] @endif">
+                                        <flux:text size="xs" class="{{ $statusColorClass }}">
                                             @if($indexingStatus['icon'] === 'check-circle')
                                                 <flux:icon.check class="w-3 h-3 inline mr-1" />
                                             @elseif($indexingStatus['icon'] === 'exclamation-triangle')

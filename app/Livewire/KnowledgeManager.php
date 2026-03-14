@@ -66,6 +66,8 @@ class KnowledgeManager extends Component
 
     public $embeddingStatistics = [];
 
+    public $embeddingStatisticsLoading = false;
+
     // Search relevance scores indexed by document ID
     public $searchRelevanceScores = [];
 
@@ -438,7 +440,16 @@ class KnowledgeManager extends Component
         $this->showEmbeddingStatus = ! $this->showEmbeddingStatus;
 
         if ($this->showEmbeddingStatus) {
+            $this->embeddingStatisticsLoading = true;
             $this->loadEmbeddingStatistics();
+            $this->embeddingStatisticsLoading = false;
+
+            // Provide user feedback
+            if (! empty($this->embeddingStatistics['error'])) {
+                $this->dispatch('warning', 'Could not load embedding statistics: '.$this->embeddingStatistics['error']);
+            } elseif (empty($this->embeddingStatistics) || $this->embeddingStatistics['total_documents'] === 0) {
+                $this->dispatch('info', 'No documents found. Add some knowledge documents to see indexing statistics.');
+            }
         }
     }
 
@@ -718,158 +729,112 @@ class KnowledgeManager extends Component
 
     public function reindexEverything()
     {
-        try {
-            $knowledgeManager = app(KnowledgeManagerService::class);
-            $vectorStore = app(\App\Services\Knowledge\VectorStores\MeilisearchVectorStore::class);
-            $meilisearchClient = $vectorStore->getClient();
+        // CRITICAL: Add very first log to see if method is even called
+        \Illuminate\Support\Facades\Log::info('==== REINDEX BUTTON CLICKED ====', [
+            'user_id' => auth()->id(),
+            'timestamp' => now()->toDateTimeString(),
+        ]);
 
-            // Get current document counts before deletion
-            $totalDocuments = KnowledgeDocument::count();
-            $currentIndexCount = $vectorStore->getDocumentCount();
+        try {
+            Log::info('KnowledgeManager: Reindex everything started');
+
+            $totalDocuments = KnowledgeDocument::where('processing_status', 'completed')->count();
 
             $this->dispatch('info', "Starting full reindex of {$totalDocuments} documents...");
 
-            // Step 1: Delete the entire Meilisearch index (full flush)
+            // Step 1: Remove all documents from search index
             try {
-                // This completely deletes the index, not just the documents
-                $deleteResult = $meilisearchClient->deleteIndex('knowledge_documents');
+                Log::info('Removing all documents from search index');
+                $this->dispatch('info', 'Clearing search index...');
 
-                if (isset($deleteResult['taskUid'])) {
-                    // Wait for the deletion to complete
-                    $meilisearchClient->waitForTask($deleteResult['taskUid']);
+                // Get all documents and remove from index
+                $allDocuments = KnowledgeDocument::all();
+                if ($allDocuments->count() > 0) {
+                    $allDocuments->unsearchable();
+                    Log::info('Removed documents from index', ['count' => $allDocuments->count()]);
                 }
 
-                $this->dispatch('info', "Completely deleted existing index ({$currentIndexCount} documents removed)");
+                $this->dispatch('info', 'Search index cleared');
+                sleep(2);
+            } catch (\Exception $e) {
+                Log::error('Failed to clear search index', ['error' => $e->getMessage()]);
+                $this->dispatch('warning', 'Failed to clear index: '.$e->getMessage());
+            }
 
-                // Ensure the index is completely clean
-                if ($this->ensureIndexIsClean($vectorStore)) {
-                    $this->dispatch('info', 'Verified index is completely clean');
+            // Step 2: Clear meilisearch_document_id from database for fresh start
+            try {
+                Log::info('Clearing stale document IDs');
+                \Illuminate\Support\Facades\DB::table('knowledge_documents')
+                    ->whereNotNull('meilisearch_document_id')
+                    ->update(['meilisearch_document_id' => null]);
+                $this->dispatch('info', 'Cleared document tracking IDs');
+            } catch (\Exception $e) {
+                Log::error('Failed to clear document IDs', ['error' => $e->getMessage()]);
+            }
+
+            // Step 3: Re-import all completed documents using Scout's model method
+            try {
+                Log::info('Starting Scout reindex');
+                $this->dispatch('info', 'Importing documents to search index...');
+
+                // Get all completed documents and make them searchable
+                $documents = KnowledgeDocument::where('processing_status', 'completed')->get();
+
+                if ($documents->count() > 0) {
+                    // Use Scout's makeAllSearchable method - this triggers embedding generation via observers
+                    $documents->searchable();
+
+                    Log::info('Scout reindex initiated', ['document_count' => $documents->count()]);
+                    $this->dispatch('info', "Indexed {$documents->count()} documents");
                 } else {
-                    $this->dispatch('warning', 'Index may still contain old documents');
+                    $this->dispatch('info', 'No completed documents to index');
                 }
+
+                sleep(3); // Give index time to update
             } catch (\Exception $e) {
-                // If index doesn't exist or deletion fails, that's okay, continue
-                $this->dispatch('info', 'Cleared existing index (or index did not exist)');
+                Log::error('Failed to reindex documents', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+                $this->dispatch('error', 'Failed to import documents: '.$e->getMessage());
+
+                return;
             }
 
-            // Step 2: Recreate the index with proper settings
-            try {
-                $vectorStore->createIndex();
-                $this->dispatch('info', 'Recreated index with proper settings');
-
-                // Give the index creation time to complete
-                sleep(3);
-            } catch (\Exception $e) {
-                $this->dispatch('warning', 'Index creation may have failed: '.$e->getMessage());
-            }
-
-            // Step 3: Configure embedder if embeddings are enabled
+            // Step 4: Queue embedding generation jobs if embeddings enabled
             $embeddingService = app(\App\Services\Knowledge\Embeddings\EmbeddingService::class);
             if ($embeddingService->isEnabled()) {
                 try {
-                    $vectorStore->configureEmbedder();
-                    $this->dispatch('info', 'Configured embedder for vector search');
-                    sleep(2);
-                } catch (\Exception $e) {
-                    $this->dispatch('warning', 'Embedder configuration may not be supported in this Meilisearch version');
-                }
-            }
-
-            // Step 4: Clear any stale Meilisearch document IDs from database before Scout import
-            try {
-                \DB::table('knowledge_documents')
-                    ->whereNotNull('meilisearch_document_id')
-                    ->update(['meilisearch_document_id' => null]);
-
-                $this->dispatch('info', 'Cleared stale Meilisearch document IDs');
-            } catch (\Exception $e) {
-                $this->dispatch('warning', 'Failed to clear stale document IDs: '.$e->getMessage());
-            }
-
-            // Step 5: Trigger Scout reindex to populate with basic document data
-            try {
-                // Temporarily disable Scout queuing for immediate processing
-                $originalQueueSetting = config('scout.queue');
-                config(['scout.queue' => false]);
-
-                $this->dispatch('info', 'Starting Scout import (this may take a few minutes)...');
-
-                // Use chunk-based import for better memory management and progress tracking
-                $completedDocuments = KnowledgeDocument::where('processing_status', 'completed')->get();
-                $totalDocs = $completedDocuments->count();
-                $processed = 0;
-
-                // Process in smaller chunks to avoid timeouts
-                $completedDocuments->chunk(5)->each(function ($chunk) use (&$processed, $totalDocs) {
-                    foreach ($chunk as $document) {
-                        try {
-                            // Sync each document individually to avoid bulk timeout issues
-                            $document->searchable();
-                            $processed++;
-
-                            if ($processed % 5 === 0) {
-                                $this->dispatch('info', "Indexed {$processed}/{$totalDocs} documents...");
-                            }
-                        } catch (\Exception $docError) {
-                            $this->dispatch('warning', "Failed to index document {$document->id}: ".$docError->getMessage());
-                        }
-
-                        // Small delay to prevent overwhelming Meilisearch
-                        usleep(100000); // 0.1 second delay
-                    }
-                });
-
-                // Restore original queue setting
-                config(['scout.queue' => $originalQueueSetting]);
-
-                // Wait for all operations to complete
-                sleep(3);
-
-                // Verify the import worked
-                $indexCount = $vectorStore->getDocumentCount();
-                $this->dispatch('info', "Scout import completed: {$processed} documents processed, {$indexCount} documents in index");
-
-            } catch (\Exception $e) {
-                // Restore queue setting on error
-                config(['scout.queue' => $originalQueueSetting ?? true]);
-                $this->dispatch('warning', 'Scout reindex failed: '.$e->getMessage());
-            }
-
-            // Step 6: Use the queue system for embedding generation (instead of synchronous processing)
-            if ($embeddingService->isEnabled()) {
-                try {
-                    // Get all completed documents for embedding generation
                     $completedDocuments = KnowledgeDocument::where('processing_status', 'completed')
                         ->orderBy('created_at', 'desc')
                         ->get();
 
                     if ($completedDocuments->count() > 0) {
-                        $this->dispatch('info', "Queuing embedding generation jobs for {$completedDocuments->count()} documents...");
+                        Log::info('Queuing embedding generation jobs', ['count' => $completedDocuments->count()]);
+                        $this->dispatch('info', "Queuing {$completedDocuments->count()} embedding jobs...");
 
-                        // Queue embedding jobs for each document (this will trigger the observer system)
+                        // Queue embedding jobs for each document
                         foreach ($completedDocuments as $document) {
-                            // Use the existing job system with a small delay
                             \App\Jobs\GenerateDocumentEmbeddings::dispatch($document)
                                 ->delay(now()->addSeconds(2))
                                 ->onQueue('embeddings');
                         }
 
-                        $this->dispatch('success', "Queued {$completedDocuments->count()} embedding generation jobs. Check queue status to monitor progress.");
+                        $this->dispatch('success', "Queued {$completedDocuments->count()} jobs. Monitor Horizon for progress.");
                     } else {
-                        $this->dispatch('info', 'No completed documents found for embedding generation');
+                        $this->dispatch('info', 'No completed documents found');
                     }
                 } catch (\Exception $e) {
+                    Log::error('Failed to queue embedding jobs', ['error' => $e->getMessage()]);
                     $this->dispatch('error', 'Failed to queue embedding jobs: '.$e->getMessage());
                 }
             } else {
-                $this->dispatch('info', 'Embeddings disabled, skipping embedding generation');
+                $this->dispatch('info', 'Embeddings disabled');
             }
 
-            // Step 7: Refresh statistics and UI
-            $this->loadEmbeddingStatistics();
-            $this->dispatch('$refresh');
+            // Step 5: Clear embedding statistics cache and refresh
+            cache()->flush();
+            $this->loadEmbeddingStatistics(true);
 
-            $this->dispatch('success', "Full reindex initiated! Check the queue for embedding generation progress. Processed {$totalDocuments} documents.");
+            Log::info('Reindex completed successfully', ['total_documents' => $totalDocuments]);
+            $this->dispatch('success', "Reindex complete! Processed {$totalDocuments} documents. Check Horizon for embedding progress.");
 
         } catch (\Exception $e) {
             $this->dispatch('error', 'Full reindex failed: '.$e->getMessage());
@@ -894,9 +859,14 @@ class KnowledgeManager extends Component
     /**
      * Load embedding statistics for the embedding status display
      */
-    public function loadEmbeddingStatistics(): void
+    public function loadEmbeddingStatistics(bool $clearCache = false): void
     {
         try {
+            // Optionally clear cache to force fresh calculation
+            if ($clearCache) {
+                cache()->tags(['embedding_status'])->flush();
+            }
+
             $knowledgeManager = app(KnowledgeManagerService::class);
             $this->embeddingStatistics = $knowledgeManager->getEmbeddingStatistics();
 

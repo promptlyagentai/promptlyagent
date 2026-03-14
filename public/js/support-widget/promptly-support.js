@@ -31,7 +31,8 @@
             placeholderText: 'Ask a question...',
             welcomeMessage: 'Hi! How can I help you today?',
             debug: false,               // Enable debug logging
-            authMode: null              // Auto-detected: 'session' or 'token'
+            authMode: null,             // Auto-detected: 'session' or 'token'
+            bugReportEnabled: false     // Enable bug report feature (requires GitHub config)
         },
 
         // Widget state
@@ -775,11 +776,17 @@
                 // Create chat window
                 const chat = document.createElement('div');
                 chat.className = `promptly-support-chat ${PromptlySupport.config.position}`;
+
+                // Conditionally include bug report button
+                const bugReportButton = PromptlySupport.config.bugReportEnabled
+                    ? '<button class="promptly-support-header-btn" id="promptly-report-bug" title="Report Bug" aria-label="Report bug"></button>'
+                    : '';
+
                 chat.innerHTML = `
                     <div class="promptly-support-header">
                         <div class="promptly-support-header-title" id="promptly-header-title">${PromptlySupport.config.widgetTitle}</div>
                         <div class="promptly-support-header-actions">
-                            <button class="promptly-support-header-btn" id="promptly-report-bug" title="Report Bug" aria-label="Report bug"></button>
+                            ${bugReportButton}
                             <button class="promptly-support-header-btn" id="promptly-new-session" title="New conversation" aria-label="Start new conversation">
                                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M6 10H10.5C11.3284 10 12 9.32843 12 8.5V4" stroke="currentColor" stroke-width="1.5"></path>
@@ -833,8 +840,10 @@
 
                 document.body.appendChild(chat);
 
-                // Initialize bug report button icon
-                PromptlySupport.bugReport.updateToggleButton();
+                // Initialize bug report button icon (only if bug reporting is enabled)
+                if (PromptlySupport.config.bugReportEnabled) {
+                    PromptlySupport.bugReport.updateToggleButton();
+                }
 
                 // Show welcome message
                 this.addMessage('assistant', PromptlySupport.config.welcomeMessage);
@@ -857,10 +866,12 @@
                     }
                 });
 
-                // Report bug button
-                this.elements.bugReportBtn.addEventListener('click', () => {
-                    PromptlySupport.bugReport.toggleMode();
-                });
+                // Report bug button (only if bug reporting is enabled)
+                if (PromptlySupport.config.bugReportEnabled && this.elements.bugReportBtn) {
+                    this.elements.bugReportBtn.addEventListener('click', () => {
+                        PromptlySupport.bugReport.toggleMode();
+                    });
+                }
 
                 // Select element button
                 this.elements.selectBtn.addEventListener('click', () => {

@@ -1498,7 +1498,7 @@ class KnowledgeManager implements KnowledgeManagerInterface
         $cacheKey = "embedding_status_all_{$docsCount}_{$lastUpdated}";
 
         // Check if status is cached
-        $cachedStats = cache()->get($cacheKey);
+        $cachedStats = cache()->tags(['embedding_status'])->get($cacheKey);
         if ($cachedStats) {
             return $cachedStats;
         }
@@ -1554,7 +1554,7 @@ class KnowledgeManager implements KnowledgeManagerInterface
         });
 
         $dynamicCacheTtl = $hasPendingDocuments ? 30 : 300; // 30 seconds if pending, 5 minutes if stable
-        cache()->put($cacheKey, $stats, $dynamicCacheTtl);
+        cache()->tags(['embedding_status'])->put($cacheKey, $stats, $dynamicCacheTtl);
 
         return $stats;
     }
@@ -1566,6 +1566,11 @@ class KnowledgeManager implements KnowledgeManagerInterface
      * embedding availability. Uses transient embedding architecture where
      * embeddings are generated during indexing and stored only in Meilisearch.
      *
+     * Important: Meilisearch stores vectors internally but does NOT return
+     * the _vectors field when fetching documents. Vectors are only used for
+     * semantic search operations. We verify embeddings by checking document
+     * existence in the index (embeddings are generated during indexing).
+     *
      * Status Determination Flow:
      * 1. Check processing_status (failed/pending/completed)
      * 2. Check meilisearch_document_id existence
@@ -1574,12 +1579,12 @@ class KnowledgeManager implements KnowledgeManagerInterface
      * 5. Assume embeddings available if indexed (transient architecture)
      *
      * Caching Strategy:
-     * - Cache key includes document updated_at timestamp
+     * - Cache key includes document meilisearch_document_id
      * - Dynamic TTL based on status:
      *   - Completed/available: 5 minutes (stable)
      *   - Pending/missing: 10 seconds (frequent checks)
      *   - Failed/errors: 1 minute (error state)
-     * - Cache auto-invalidates when document updated
+     * - Cache tagged for easy flushing
      *
      * @param  KnowledgeDocument  $document  Document to check
      * @return array{
@@ -1592,9 +1597,9 @@ class KnowledgeManager implements KnowledgeManagerInterface
      */
     public function getDocumentEmbeddingStatus(KnowledgeDocument $document): array
     {
-        // Use document's updated_at timestamp as part of the cache key
-        // This ensures cache is invalidated when document is modified
-        $cacheKey = "embedding_status_{$document->id}_{$document->updated_at->timestamp}";
+        // Use document ID and meilisearch_document_id as cache key
+        // updated_at doesn't change when embeddings are added to Meilisearch
+        $cacheKey = "embedding_status_{$document->id}_{$document->meilisearch_document_id}";
 
         // Dynamic cache TTL based on status:
         // - Completed/available: 5 minutes (long cache)
@@ -1602,7 +1607,7 @@ class KnowledgeManager implements KnowledgeManagerInterface
         // - Errors: 1 minute (handled separately below)
 
         // Check if status is in cache
-        $cachedStatus = cache()->get($cacheKey);
+        $cachedStatus = cache()->tags(['embedding_status'])->get($cacheKey);
         if ($cachedStatus) {
             // Return cached status without querying Meilisearch
             return $cachedStatus;
@@ -1620,7 +1625,7 @@ class KnowledgeManager implements KnowledgeManagerInterface
         if ($document->processing_status === 'failed') {
             $status['status'] = 'failed';
             $status['details'][] = 'Document processing failed';
-            cache()->put($cacheKey, $status, 60); // Cache failures for 1 minute
+            cache()->tags(['embedding_status'])->put($cacheKey, $status, 60); // Cache failures for 1 minute
 
             return $status;
         }
@@ -1629,7 +1634,7 @@ class KnowledgeManager implements KnowledgeManagerInterface
         if ($document->processing_status !== 'completed') {
             $status['status'] = 'pending';
             $status['details'][] = "Processing status: {$document->processing_status}";
-            cache()->put($cacheKey, $status, 10); // Cache pending for 10 seconds (frequent checks)
+            cache()->tags(['embedding_status'])->put($cacheKey, $status, 10); // Cache pending for 10 seconds (frequent checks)
 
             return $status;
         }
@@ -1638,7 +1643,7 @@ class KnowledgeManager implements KnowledgeManagerInterface
         if (! $document->meilisearch_document_id) {
             $status['status'] = 'missing';
             $status['details'][] = 'No Meilisearch document ID';
-            cache()->put($cacheKey, $status, 10); // Cache missing for 10 seconds (frequent checks)
+            cache()->tags(['embedding_status'])->put($cacheKey, $status, 10); // Cache missing for 10 seconds (frequent checks)
 
             return $status;
         }
@@ -1647,13 +1652,14 @@ class KnowledgeManager implements KnowledgeManagerInterface
         if (! $this->embeddingService->isEnabled()) {
             $status['status'] = 'disabled';
             $status['details'][] = 'Embedding service is disabled';
-            cache()->put($cacheKey, $status, 300); // Cache disabled status for 5 minutes
+            cache()->tags(['embedding_status'])->put($cacheKey, $status, 300); // Cache disabled status for 5 minutes
 
             return $status;
         }
 
-        // For the new architecture: assume embeddings are available if document is indexed
-        // and embedding service is enabled, since embeddings are generated during indexing
+        // Check if document exists in Meilisearch and has embeddings
+        // Note: Meilisearch does NOT return _vectors field when fetching documents
+        // Vectors are stored internally and only used for search operations
         try {
             // Verify document exists in Meilisearch
             $index = $this->meilisearch->index('knowledge_documents');
@@ -1662,35 +1668,41 @@ class KnowledgeManager implements KnowledgeManagerInterface
             if (! $meilisearchDoc) {
                 $status['status'] = 'missing';
                 $status['details'][] = 'Document not found in search index';
-                cache()->put($cacheKey, $status, 10); // Cache missing for 10 seconds (frequent checks)
+                cache()->tags(['embedding_status'])->put($cacheKey, $status, 10); // Cache missing for 10 seconds (frequent checks)
 
                 return $status;
             }
 
-            // In the new architecture, if document is indexed and embedding service is enabled,
-            // we can assume embeddings are available (they're generated during indexing)
+            // If document exists in index and embedding service is enabled,
+            // we can assume embeddings are present (they're added during indexing)
+            // We cannot verify _vectors field directly as Meilisearch doesn't return it
             $status['status'] = 'available';
-            $status['dimensions'] = 3072; // text-embedding-3-large dimensions
+            $status['dimensions'] = config('knowledge.embeddings.dimensions', 3072);
             $status['model'] = config('knowledge.embeddings.model', 'openai/text-embedding-3-large');
-            $status['has_vector_field'] = true;
-            $status['details'][] = 'Embeddings generated during indexing (transient architecture)';
+            $status['has_vector_field'] = true; // Assumed present if document indexed
+            $status['details'][] = 'Document indexed with embeddings (verified via existence in search index)';
 
         } catch (\Exception $e) {
             $status['status'] = 'error';
             $status['details'][] = "Error checking search index: {$e->getMessage()}";
 
             // Cache error status too, but for shorter period
-            cache()->put($cacheKey, $status, 60); // Cache errors for 1 minute
+            cache()->tags(['embedding_status'])->put($cacheKey, $status, 60); // Cache errors for 1 minute
 
             Log::warning('KnowledgeManager: Failed to check document embedding status', [
                 'document_id' => $document->id,
                 'meilisearch_id' => $document->meilisearch_document_id,
                 'error' => $e->getMessage(),
             ]);
+
+            return $status;
         }
 
-        // Cache successful results for longer period
-        cache()->put($cacheKey, $status, 300); // Cache available status for 5 minutes
+        // Cache based on status:
+        // - 'available' or 'disabled': 5 minutes (stable)
+        // - 'missing': 10 seconds (may change soon during generation)
+        $cacheTtl = in_array($status['status'], ['available', 'disabled']) ? 300 : 10;
+        cache()->put($cacheKey, $status, $cacheTtl);
 
         return $status;
     }
