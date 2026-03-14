@@ -31,6 +31,9 @@ services:
             REVERB_APP_SECRET: '${REVERB_APP_SECRET}'
             REVERB_APP_ID: '${REVERB_APP_ID}'
             REVERB_SERVER_PATH: '${REVERB_SERVER_PATH:-}'
+            # Vite development server settings (for npm run dev)
+            VITE_HMR_HOST: '${REVERB_HOST}'
+            VITE_DEV_SERVER_URL: '${REVERB_SCHEME}://${REVERB_HOST}'
             # Feature Flags
             PROMPTLY_ENCOURAGE_DIRECT_ANSWERS: '${PROMPTLY_ENCOURAGE_DIRECT_ANSWERS:-false}'
             XDEBUG_MODE: '${SAIL_XDEBUG_MODE:-off}'

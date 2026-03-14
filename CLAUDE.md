@@ -103,6 +103,39 @@ mcp__laravel-boost__tinker "Agent::with('tools')->find(1)"
 - MarkItDown: http://localhost:8000
 - SearXNG: http://localhost:4000
 
+### 🌐 Custom Domain Access
+
+**Default:** http://localhost
+**Custom Domain:** Requires configuration (see below)
+
+To access from a remote host (e.g., https://app.example.com):
+
+**Simplified Configuration Pattern:**
+```bash
+# 1. Set base configuration
+APP_HOST=app.example.com
+APP_PROTOCOL=https
+
+# 2. Build derived values
+APP_URL=https://app.example.com
+
+REVERB_HOST=app.example.com
+REVERB_PORT=443
+REVERB_SCHEME=https
+
+# 3. Configure frontend (must match above)
+VITE_REVERB_HOST=app.example.com
+VITE_REVERB_PORT=443
+VITE_REVERB_SCHEME=https
+VITE_REVERB_APP_KEY="${REVERB_APP_KEY}"
+```
+
+**Requirements:**
+- Reverse proxy (Caddy, Nginx, or Traefik) for HTTPS termination
+- Proxy must forward `X-Forwarded-*` headers
+
+**Full Documentation:** `docs/10-custom-domains.md`
+
 ---
 
 ## 📂 Application Architecture

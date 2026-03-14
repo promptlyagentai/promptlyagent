@@ -302,6 +302,18 @@ Once everything is running, you can access:
 - **MarkItDown Service**: http://localhost:8000 (document processing)
 - **SearXNG Service**: http://localhost:4000 (meta-search)
 
+### Remote Access via Custom Domain
+
+To access PromptlyAgent from a remote host or custom domain (e.g., `https://app.example.com`):
+
+**Quick Steps:**
+1. Set `APP_HOST` and `APP_PROTOCOL` in `.env` (simplified pattern)
+2. Derive all other URL-related variables from these
+3. Set up reverse proxy (Caddy, Nginx, Traefik) for HTTPS termination
+4. Ensure proxy forwards `X-Forwarded-*` headers
+
+**Complete Guide:** See **[Custom Domain Configuration](10-custom-domains.md)** for detailed setup instructions, reverse proxy examples, and troubleshooting.
+
 ## Login
 
 Use the credentials you created with `make:admin` command to log in at http://localhost

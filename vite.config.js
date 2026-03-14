@@ -6,10 +6,15 @@ import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
+    // Server configuration
+    // - host: 0.0.0.0 allows access from outside the container
+    // - origin: Full URL for asset serving (set via VITE_DEV_SERVER_URL in docker-compose.yml)
+    // - hmr.host: Domain for HMR WebSocket (set via VITE_HMR_HOST in docker-compose.yml)
     server: {
         host: '0.0.0.0',
+        origin: process.env.VITE_DEV_SERVER_URL || undefined,
         hmr: {
-            host: 'localhost',
+            host: process.env.VITE_HMR_HOST || 'localhost',
         },
     },
     plugins: [
