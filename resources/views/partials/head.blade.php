@@ -36,6 +36,21 @@
 @livewireStyles
 @fluxAppearance
 
+<script>
+// Fix for Livewire v3.7.11+ / Flux v2.13.0+ navigation removing dark mode class
+document.addEventListener('livewire:navigating', function() {
+    // Store current appearance state before navigation
+    window._darkModeBeforeNav = document.documentElement.classList.contains('dark');
+});
+
+document.addEventListener('livewire:navigated', function() {
+    // Restore dark mode class if it was set before navigation
+    if (window._darkModeBeforeNav) {
+        document.documentElement.classList.add('dark');
+    }
+});
+</script>
+
 <!-- File Upload Styles (simple approach) -->
 <style>
 .file-upload-area {
