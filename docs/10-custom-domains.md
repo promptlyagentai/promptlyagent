@@ -211,7 +211,7 @@ VITE_REVERB_APP_ID="${REVERB_APP_ID}"
 **Test with:**
 ```bash
 # After npm run build:
-grep -o 'dev\.0tt\.me' public/build/assets/app-*.js
+grep -o 'app\.example\.com' public/build/assets/app-*.js
 ```
 
 #### Vite Development Server (docker-compose.yml)
