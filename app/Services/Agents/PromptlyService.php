@@ -228,25 +228,78 @@ class PromptlyService
 
         // Get structured selection from AI
         // Use withSystemPrompt() for provider interoperability (per Prism best practices)
-        $schema = app(\App\Services\AI\PrismWrapper::class)
-            ->structured()
-            ->using($model['provider'], $model['model'])
-            ->withMaxTokens(2048) // Agent selection is concise, doesn't need large output
-            ->withSystemPrompt($systemPrompt) // Provider-agnostic system prompt handling
-            ->withMessages([
-                new UserMessage($userPrompt),
-            ])
-            ->withSchema(new AgentSelectionSchema)
-            ->withContext([
-                'operation' => 'agent_selection',
-                'query_length' => strlen($query),
-                'available_agents' => count($agents),
-                'has_conversation_context' => $conversationContext !== null,
-                'source' => 'PromptlyService::selectAgent',
-            ])
-            ->asStructured();
+        try {
+            $schema = app(\App\Services\AI\PrismWrapper::class)
+                ->structured()
+                ->using($model['provider'], $model['model'])
+                ->withMaxTokens(2048) // Agent selection is concise, doesn't need large output
+                ->withSystemPrompt($systemPrompt) // Provider-agnostic system prompt handling
+                ->withMessages([
+                    new UserMessage($userPrompt),
+                ])
+                ->withSchema(new AgentSelectionSchema)
+                ->withContext([
+                    'operation' => 'agent_selection',
+                    'query_length' => strlen($query),
+                    'available_agents' => count($agents),
+                    'has_conversation_context' => $conversationContext !== null,
+                    'source' => 'PromptlyService::selectAgent',
+                ])
+                ->asStructured();
 
-        return AgentSelectionSchema::extractSelectionData($schema->structured);
+            return AgentSelectionSchema::extractSelectionData($schema->structured);
+        } catch (\Throwable $e) {
+            $fallbackStructured = $this->extractStructuredSelectionFromException($e);
+
+            if ($fallbackStructured !== null) {
+                Log::warning('PromptlyService: Recovered structured agent selection from fenced JSON', [
+                    'query_length' => strlen($query),
+                    'available_agents' => count($agents),
+                    'exception_class' => get_class($e),
+                ]);
+
+                return AgentSelectionSchema::extractSelectionData($fallbackStructured);
+            }
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Bedrock can return valid JSON wrapped in markdown fences, which Prism rejects.
+     */
+    protected function extractStructuredSelectionFromException(\Throwable $e): ?array
+    {
+        $message = $e->getMessage();
+
+        if (! str_contains($message, 'Structured object could not be decoded. Received:')) {
+            return null;
+        }
+
+        $payload = trim(substr($message, strpos($message, 'Received:') + strlen('Received:')));
+        $payload = preg_replace('/^```(?:json)?\s*/i', '', $payload);
+        $payload = preg_replace('/\s*```$/', '', $payload);
+        $payload = trim($payload);
+
+        if (str_starts_with(strtolower($payload), 'json ')) {
+            $payload = trim(substr($payload, 5));
+        }
+
+        $start = strpos($payload, '{');
+        $end = strrpos($payload, '}');
+
+        if ($start === false || $end === false || $end <= $start) {
+            return null;
+        }
+
+        $json = substr($payload, $start, $end - $start + 1);
+        $decoded = json_decode($json, true);
+
+        if (! is_array($decoded) || json_last_error() !== JSON_ERROR_NONE) {
+            return null;
+        }
+
+        return $decoded;
     }
 
     /**

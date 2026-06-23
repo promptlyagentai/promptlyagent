@@ -131,7 +131,7 @@ class PrismWrapper
     {
         $config = $this->modelSelector->getProviderAndModel($complexity);
 
-        $this->provider = $config['provider'];
+        $this->provider = $config['provider'] instanceof Provider ? $config['provider'] : null;
         $this->model = $config['model'];
         $this->prism = $this->prism->using($config['provider'], $config['model']);
 

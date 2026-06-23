@@ -32,6 +32,21 @@
 <link rel="preconnect" href="https://fonts.bunny.net">
 <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />
 
+@php
+    $reverbClientConfig = config('broadcasting.connections.reverb.client', []);
+@endphp
+<script>
+window.promptlyagent = window.promptlyagent || {};
+window.promptlyagent.reverb = @js([
+    'key' => $reverbClientConfig['key'] ?? null,
+    'appId' => $reverbClientConfig['app_id'] ?? null,
+    'host' => $reverbClientConfig['host'] ?? request()->getHost(),
+    'port' => $reverbClientConfig['port'] ?? 443,
+    'scheme' => $reverbClientConfig['scheme'] ?? 'https',
+    'path' => $reverbClientConfig['path'] ?? '/ws',
+]);
+</script>
+
 @vite(['resources/css/app.css', 'resources/js/app.js'])
 @livewireStyles
 @fluxAppearance

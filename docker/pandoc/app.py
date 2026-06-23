@@ -115,11 +115,12 @@ async def health_check():
             ["pandoc", "--version"],
             capture_output=True,
             text=True,
-            timeout=5
+            timeout=10
         )
+        version_output = result.stdout or result.stderr
         return {
             "status": "healthy",
-            "pandoc_version": result.stdout.split('\n')[0]
+            "pandoc_version": version_output.splitlines()[0] if version_output else "pandoc"
         }
     except Exception as e:
         logger.error(f"Health check failed: {e}")

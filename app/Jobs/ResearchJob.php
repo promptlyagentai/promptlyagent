@@ -554,12 +554,9 @@ class ResearchJob implements ShouldQueue
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            // Mark execution as failed
-            $execution->update([
-                'status' => 'failed',
-                'error_message' => $e->getMessage(),
-                'completed_at' => now(),
-            ]);
+            // Mark execution as failed through the model helper so long provider
+            // errors are truncated safely for the legacy string column.
+            $execution->markAsFailed($e->getMessage());
 
             // Broadcast failure
             $this->broadcastFailure($e->getMessage());

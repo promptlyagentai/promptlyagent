@@ -302,6 +302,7 @@ class StatusStreamManager {
         this.reconnectAttempts = 0;
         this.reconnectTimer = null;
         this.healthCheckTimer = null;
+        this.echoMonitoringInitialized = false;
         this.messageCache = new Set(); // For deduplication (max 1000 items before auto-clear)
 
         // Processing state
@@ -349,6 +350,35 @@ class StatusStreamManager {
         this.isDuplicateMessage = this.isDuplicateMessage.bind(this);
         this.initializeThinkingProcessContainer = this.initializeThinkingProcessContainer.bind(this);
         this.scrollToNewest = this.scrollToNewest.bind(this);
+        this.getLivewireComponent = this.getLivewireComponent.bind(this);
+    }
+
+    /**
+     * Resolve the chat research Livewire component instead of whichever
+     * Livewire component happens to be first in the DOM.
+     */
+    getLivewireComponent() {
+        if (!window.Livewire) {
+            return null;
+        }
+
+        const livewireElement =
+            document.querySelector('[data-chat-research-interface][wire\\:id]') ||
+            document.querySelector('[data-current-interaction-id][data-current-session-id][wire\\:id]');
+
+        if (!livewireElement) {
+            console.warn('StatusStreamManager: Chat Livewire component not found');
+            return null;
+        }
+
+        const componentId = livewireElement.getAttribute('wire:id');
+        const component = window.Livewire.find(componentId);
+
+        if (!component) {
+            console.warn('StatusStreamManager: Chat Livewire component unavailable', { componentId });
+        }
+
+        return component;
     }
     
     /**
@@ -889,6 +919,12 @@ class StatusStreamManager {
             return;
         }
 
+        if (this.echoMonitoringInitialized) {
+            return;
+        }
+
+        this.echoMonitoringInitialized = true;
+
         // Monitor connection events
         window.Echo.connector.pusher.connection.bind('connected', () => {
             this.connectionStatus = 'connected';
@@ -917,9 +953,6 @@ class StatusStreamManager {
             // Stop health check while disconnected
             this.stopHealthCheck();
 
-            // Attempt reconnection
-            this.reconnect();
-
             // Dispatch event for UI components
             window.dispatchEvent(new CustomEvent('status-stream:disconnected'));
         });
@@ -927,9 +960,6 @@ class StatusStreamManager {
         window.Echo.connector.pusher.connection.bind('error', (error) => {
             console.error('StatusStreamManager: WebSocket error', error);
             this.connectionStatus = 'error';
-
-            // Attempt reconnection on error
-            this.reconnect();
 
             // Dispatch event for UI components
             window.dispatchEvent(new CustomEvent('status-stream:error', { detail: error }));
@@ -980,14 +1010,6 @@ class StatusStreamManager {
 
             // Update internal tracking
             this.connectionStatus = currentState;
-
-            // Attempt reconnection for disconnected/failed states
-            if (['disconnected', 'failed', 'connecting'].includes(currentState)) {
-                // Only reconnect if we haven't already started
-                if (currentState !== 'connecting') {
-                    this.reconnect();
-                }
-            }
 
             // Dispatch event for UI components
             window.dispatchEvent(new CustomEvent('status-stream:unhealthy', {
@@ -1124,24 +1146,29 @@ class StatusStreamManager {
             return;
         }
 
+        const sessionId = this.getCurrentSessionId();
+        const artifactsChannel = sessionId ? `artifacts-updated.${sessionId}` : `artifacts-updated.${interactionId}`;
+        const expectedChannels = [
+            `status-stream.${interactionId}`,
+            `chat-interaction.${interactionId}`,
+            `sources-updated.${interactionId}`,
+            artifactsChannel,
+        ];
+
         // Guard against duplicate subscriptions - check if we're already subscribed
         if (this.currentInteractionId === interactionId && this.activeSubscriptions.size > 0) {
-            console.log(`StatusStreamManager: Already subscribed to interaction ${interactionId}, skipping duplicate subscription`);
-            return;
-        }
+            const missingChannels = expectedChannels.filter((channelName) => !this.hasEchoChannel(channelName));
 
-        // Guard against cross-window/tab duplicate subscriptions
-        const subscriptionKey = `echo_sub_${interactionId}`;
-        if (window[subscriptionKey]) {
-            console.log(`StatusStreamManager: Interaction ${interactionId} already has active subscription in this window`);
-            return;
-        }
+            if (missingChannels.length === 0) {
+                console.log(`StatusStreamManager: Already subscribed to interaction ${interactionId}, skipping duplicate subscription`);
+                return;
+            }
 
-        // Immediately claim ownership
-        window[subscriptionKey] = {
-            route: window.location.pathname,
-            timestamp: Date.now()
-        };
+            console.warn('StatusStreamManager: Rebinding stale Echo subscriptions', {
+                interactionId,
+                missingChannels,
+            });
+        }
 
         // Log subscription setup start
         this.eventLogger.logConnection('subscription_setup_start', {
@@ -1289,6 +1316,22 @@ class StatusStreamManager {
             listenersCount: 1
         });
 
+        // 4. Subscribe to artifact updates for this session
+        this.eventLogger.logChannelEvent('subscribe', artifactsChannel, {
+            interactionId,
+            sessionId,
+            eventTypes: ['ChatInteractionArtifactCreated']
+        });
+
+        const artifactsSubscription = window.Echo.channel(artifactsChannel)
+            .listen('ChatInteractionArtifactCreated', (e) => this.handleArtifactCreatedEvent(e));
+
+        this.activeSubscriptions.set(artifactsChannel, artifactsSubscription);
+
+        this.eventLogger.logChannelEvent('subscribed_successfully', artifactsChannel, {
+            listenersCount: 1
+        });
+
         // Log overall subscription setup completion
         this.eventLogger.logConnection('subscription_setup_completed', {
             interactionId,
@@ -1296,6 +1339,22 @@ class StatusStreamManager {
             channels: Array.from(this.activeSubscriptions.keys()),
             chatMode: this.chatMode
         });
+    }
+
+    /**
+     * Check whether Echo/Pusher still has a live channel object for this name.
+     * Local bookkeeping can become stale when another script calls leaveChannel().
+     */
+    hasEchoChannel(channelName) {
+        const channels = window.Echo?.connector?.pusher?.channels?.channels;
+
+        return Boolean(channels && channels[channelName]);
+    }
+
+    getCurrentSessionId() {
+        return document.querySelector('[data-current-session-id]')?.dataset.currentSessionId
+            || document.querySelector('meta[name="session-id"]')?.getAttribute('content')
+            || null;
     }
 
     /**
@@ -1454,14 +1513,10 @@ class StatusStreamManager {
                 console.log('StatusStreamManager: Answer was truncated in broadcast, loading full answer from DB');
 
                 // Call Livewire to refresh from database instead of using truncated data
-                const livewireElement = document.querySelector('[wire\\:id]');
-                if (livewireElement && window.Livewire) {
-                    const componentId = livewireElement.getAttribute('wire:id');
-                    const component = window.Livewire.find(componentId);
+                const component = this.getLivewireComponent();
 
-                    if (component && typeof component.call === 'function') {
-                        component.call('loadInteractions');
-                    }
+                if (component && typeof component.call === 'function') {
+                    component.call('loadInteractions');
                 }
             } else {
                 // Update answer display if available (only for non-truncated answers)
@@ -1523,6 +1578,45 @@ class StatusStreamManager {
     }
 
     /**
+     * Handle artifact created event
+     * @param {Object} event - The event data from ChatInteractionArtifactCreated event
+     */
+    handleArtifactCreatedEvent(event) {
+        const startTime = performance.now();
+        const sessionId = this.getCurrentSessionId();
+        const channel = sessionId ? `artifacts-updated.${sessionId}` : 'artifacts-updated';
+
+        this.eventLogger.logEvent('ChatInteractionArtifactCreated', channel, {
+            ...event,
+            chatMode: this.chatMode,
+            interactionId: this.currentInteractionId,
+            sessionId
+        });
+
+        try {
+            this.notifyLivewireComponent('handleChatInteractionArtifactCreated', event);
+
+            if (window.Livewire) {
+                window.Livewire.dispatch('chat-interaction-artifact-created', { cifData: event });
+            }
+
+            const processingTime = performance.now() - startTime;
+            if (processingTime > 5) {
+                this.eventLogger.logEvent('event_processing_completed', channel, {
+                    processingTimeMs: processingTime.toFixed(2),
+                    eventType: 'ChatInteractionArtifactCreated'
+                });
+            }
+        } catch (error) {
+            this.eventLogger.logError(error, {
+                context: 'handleArtifactCreatedEvent',
+                event
+            });
+            throw error;
+        }
+    }
+
+    /**
      * Handle holistic workflow completion event
      * @param {Object} event - The event data from HolisticWorkflowCompleted event
      */
@@ -1549,12 +1643,9 @@ class StatusStreamManager {
 
             // Call Livewire component's setFinalAnswer method
             // Skip if broadcast was truncated - full answer is already in database
-            const livewireElement = document.querySelector('[wire\\:id]');
-            if (livewireElement && window.Livewire && event.result) {
-                const componentId = livewireElement.getAttribute('wire:id');
-                const component = window.Livewire.find(componentId);
-
-                if (component && typeof component.call === 'function') {
+            const component = this.getLivewireComponent();
+            if (component && event.result) {
+                if (typeof component.call === 'function') {
                     const isTruncated = event.metadata?.broadcast_truncated || false;
 
                     if (!isTruncated) {
@@ -1668,12 +1759,9 @@ class StatusStreamManager {
 
             // Call Livewire component's setFinalAnswer method like holistic workflow does
             // Skip if broadcast was truncated - full answer is already in database
-            const livewireElement = document.querySelector('[wire\\:id]');
-            if (livewireElement && window.Livewire && event.result) {
-                const componentId = livewireElement.getAttribute('wire:id');
-                const component = window.Livewire.find(componentId);
-
-                if (component && typeof component.call === 'function') {
+            const component = this.getLivewireComponent();
+            if (component && event.result) {
+                if (typeof component.call === 'function') {
                     const isTruncated = event.metadata?.broadcast_truncated || false;
 
                     if (!isTruncated) {
@@ -1842,20 +1930,16 @@ class StatusStreamManager {
             }
             
             // Notify Livewire component to update its state
-            const livewireElement = document.querySelector('[wire\\:id]');
-            if (livewireElement && window.Livewire) {
-                const componentId = livewireElement.getAttribute('wire:id');
-                const component = window.Livewire.find(componentId);
-                
-                if (component && typeof component.call === 'function') {
-                    // Call Livewire method to set the final answer
-                    component.call('setFinalAnswer', {
-                        answer: answer,
-                        metadata: metadata,
-                        interaction_id: this.currentInteractionId
-                    });
-                    console.log('StatusStreamManager: Notified Livewire component about final answer');
-                }
+            const component = this.getLivewireComponent();
+
+            if (component && typeof component.call === 'function') {
+                // Call Livewire method to set the final answer
+                component.call('setFinalAnswer', {
+                    answer: answer,
+                    metadata: metadata,
+                    interaction_id: this.currentInteractionId
+                });
+                console.log('StatusStreamManager: Notified Livewire component about final answer');
             }
             
             // Dispatch event for other components that might need to know
@@ -1886,20 +1970,15 @@ class StatusStreamManager {
     notifyLivewireComponent(method, data) {
         // Keep this for backward compatibility, but it's no longer used
 
-        const livewireElement = document.querySelector('[wire\\:id]');
-        if (!livewireElement) {
-            console.warn('StatusStreamManager: No Livewire component found for', method);
+        const component = this.getLivewireComponent();
+        if (!component) {
+            console.warn('StatusStreamManager: No chat Livewire component found for', method);
             return;
         }
 
         try {
-            if (window.Livewire) {
-                const componentId = livewireElement.getAttribute('wire:id');
-                const component = window.Livewire.find(componentId);
-
-                if (component && typeof component.call === 'function') {
-                    component.call(method, data);
-                }
+            if (typeof component.call === 'function') {
+                component.call(method, data);
             }
         } catch (e) {
             console.warn('StatusStreamManager: Error notifying Livewire component', e);
@@ -2306,12 +2385,8 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // Find the Livewire component
-        const livewireElement = document.querySelector('[wire\\:id]');
-        if (!livewireElement) return;
-
-        const componentId = livewireElement.getAttribute('wire:id');
-        const component = window.Livewire && window.Livewire.find(componentId);
+        // Find the chat Livewire component
+        const component = window.statusStreamManager?.getLivewireComponent?.();
         if (!component) return;
 
         // Get the current interaction ID

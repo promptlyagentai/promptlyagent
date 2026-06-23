@@ -1269,11 +1269,7 @@ class ChatResearchInterface extends BaseChatInterface
 
         // Update execution if exists
         if ($execution) {
-            $execution->update([
-                'state' => 'failed',
-                'error_message' => "{$context} error: ".$e->getMessage(),
-                'completed_at' => now(),
-            ]);
+            $execution->markAsFailed("{$context} error: ".$e->getMessage());
         }
 
         // Report via StatusReporter

@@ -364,12 +364,13 @@ class AgentExecution extends Model
 
     public function markAsFailed(string $errorMessage, ?array $metadata = null): void
     {
-        // Truncate error message to fit in database column (assuming 255 or 500 chars max)
-        // Leave space for truncation indicator
-        $maxLength = 500; // Adjust based on your database column size
+        // error_message is a string column, so leave room for the truncation marker.
+        $maxLength = 240;
         $truncatedMessage = strlen($errorMessage) > $maxLength
             ? substr($errorMessage, 0, $maxLength - 10).'...[TRUNCATED]'
             : $errorMessage;
+
+        $existingMetadata = $this->metadata ?? [];
 
         $updateData = [
             'state' => self::STATE_FAILED,
@@ -378,14 +379,12 @@ class AgentExecution extends Model
         ];
 
         if ($metadata !== null) {
-            // Merge with existing metadata to preserve important data like ai_prompt
-            $existingMetadata = $this->metadata ?? [];
             $updateData['metadata'] = array_merge($existingMetadata, $metadata);
         }
 
         // Store full error message in metadata if it was truncated
         if (strlen($errorMessage) > $maxLength) {
-            $currentMetadata = $metadata ?? [];
+            $currentMetadata = $updateData['metadata'] ?? $existingMetadata;
             $currentMetadata['full_error_message'] = $errorMessage;
             $updateData['metadata'] = $currentMetadata;
 

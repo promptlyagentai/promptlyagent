@@ -12,6 +12,7 @@ WORKDIR /var/www/html
 
 ENV DEBIAN_FRONTEND=noninteractive \
     TZ=UTC \
+    COMPOSER_ALLOW_SUPERUSER=1 \
     SUPERVISOR_PHP_COMMAND="/usr/bin/php -d variables_order=EGPCS /var/www/html/artisan serve --host=0.0.0.0 --port=80" \
     SUPERVISOR_PHP_USER="sail"
 
@@ -139,6 +140,15 @@ COPY docker/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # Copy application files
 COPY --chown=sail:sail . /var/www/html
+
+# Install production dependencies and build frontend assets inside the image.
+RUN composer install --no-dev --no-interaction --no-progress --prefer-dist --optimize-autoloader \
+    && php artisan livewire:publish --assets \
+    && npm ci \
+    && npm run build \
+    && SCRIBE_RESPONSE_CALLS_ENABLED=false php -d error_reporting='E_ALL & ~E_DEPRECATED' artisan scribe:generate --no-interaction \
+    && npm cache clean --force \
+    && rm -rf /root/.composer/cache
 
 # Set proper file permissions
 RUN find /var/www/html/app -type f -exec chmod 644 {} \; 2>/dev/null || true \
