@@ -11,9 +11,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="{{ asset("/scribe-theme/css/theme-promptlyagent.style.css") }}" media="screen">
-    <link rel="stylesheet" href="{{ asset("/scribe-theme/css/theme-promptlyagent-custom.css") }}" media="screen">
-    <link rel="stylesheet" href="{{ asset("/scribe-theme/css/theme-promptlyagent.print.css") }}" media="print">
+    <link rel="stylesheet" href="/scribe-theme/css/theme-promptlyagent.style.css" media="screen">
+    <link rel="stylesheet" href="/scribe-theme/css/theme-promptlyagent-custom.css" media="screen">
+    <link rel="stylesheet" href="/scribe-theme/css/theme-promptlyagent.print.css" media="print">
 
     <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.10/lodash.min.js"></script>
 
@@ -34,31 +34,22 @@
 
     <script>
         var tryItOutBaseUrl = "{{ rtrim($metadata['try_it_out']['base_url'] ?? $metadata['base_url'] ?? '', '/') }}";
+        if (!tryItOutBaseUrl || tryItOutBaseUrl === 'http://localhost') {
+            tryItOutBaseUrl = window.location.origin;
+        }
         var useCsrf = Boolean({{ $metadata['try_it_out']['use_csrf'] ?? 'false' }});
         var csrfUrl = "{{ $metadata['try_it_out']['csrf_url'] ?? '/sanctum/csrf-cookie' }}";
     </script>
-    <script src="{{ asset("/vendor/scribe/js/tryitout-5.6.0.js") }}"></script>
+    <script src="{{ \Knuckles\Scribe\Tools\WritingUtils::getVersionedAsset($assetPathPrefix.'js/tryitout.js') }}"></script>
 
-    <script src="{{ asset("/scribe-theme/js/theme-default-5.6.0.js") }}"></script>
+    <script src="/scribe-theme/js/theme-default-5.6.0.js"></script>
 
     <!-- PromptlyAgent custom styling loaded from external CSS -->
 </head>
 
 <body data-languages="{{ json_encode($metadata['example_languages'] ?? []) }}" class="antialiased">
 
-<a href="#" id="nav-button">
-    <span>
-        MENU
-        <img src="{{ asset("/vendor/scribe/images/navbar.png") }}" alt="navbar-image"/>
-    </span>
-</a>
-<div class="tocify-wrapper">
-    @include("scribe::themes.promptlyagent.sidebar")
-
-    <ul class="toc-footer" id="last-updated">
-        <li>{{ $metadata['last_updated'] ?? '' }}</li>
-    </ul>
-</div>
+@include("scribe::themes.promptlyagent.sidebar")
 
 <div class="page-wrapper">
     <div class="dark-box"></div>

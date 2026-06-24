@@ -10,7 +10,7 @@
 <div class="tocify-wrapper">
     {{-- PromptlyAgent Logo (matching main application) --}}
     <div class="flex items-center justify-center w-full px-4 py-3">
-        <a href="{{ config('app.url', '/') }}" class="block">
+        <a href="/" class="block">
             <svg viewBox="0 0 1290.8 618.64" style="width: 133px; height: 64px;" xmlns="http://www.w3.org/2000/svg">
                 <style>
                     .logo-text { fill: #FFFFFF; }

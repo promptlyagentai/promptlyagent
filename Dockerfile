@@ -72,6 +72,9 @@ FROM sail-runtime
 
 LABEL maintainer="PromptlyAgent"
 
+ARG APP_URL=http://localhost
+ENV APP_URL=${APP_URL}
+
 # Install Chrome dependencies for Puppeteer
 RUN apt-get update && apt-get install -y \
     fonts-liberation \
