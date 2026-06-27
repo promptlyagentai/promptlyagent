@@ -20,6 +20,22 @@ use function Knuckles\Scribe\Config\configureStrategy;
 
 // Only the most common configs are shown. See the https://scribe.knuckles.wtf/laravel/reference/config for all.
 
+$responseStrategies = env('SCRIBE_RESPONSE_CALLS_ENABLED', true)
+    ? configureStrategy(
+        Defaults::RESPONSES_STRATEGIES,
+        Strategies\Responses\ResponseCalls::withSettings(
+            only: ['GET *'],
+            // Recommended: disable debug mode in response calls to avoid error stack traces in responses
+            config: [
+                'app.debug' => false,
+            ]
+        )
+    )
+    : array_values(array_filter(
+        Defaults::RESPONSES_STRATEGIES,
+        fn (string $strategy): bool => $strategy !== Strategies\Responses\ResponseCalls::class
+    ));
+
 return [
     // The HTML <title> for the generated documentation.
     'title' => config('app.name').' API Documentation',
@@ -225,16 +241,7 @@ return [
         'bodyParameters' => [
             ...Defaults::BODY_PARAMETERS_STRATEGIES,
         ],
-        'responses' => configureStrategy(
-            Defaults::RESPONSES_STRATEGIES,
-            Strategies\Responses\ResponseCalls::withSettings(
-                only: ['GET *'],
-                // Recommended: disable debug mode in response calls to avoid error stack traces in responses
-                config: [
-                    'app.debug' => false,
-                ]
-            )
-        ),
+        'responses' => $responseStrategies,
         'responseFields' => [
             ...Defaults::RESPONSE_FIELDS_STRATEGIES,
         ],

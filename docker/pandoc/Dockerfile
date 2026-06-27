@@ -2,17 +2,21 @@ FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     pandoc \
-    texlive-full \
+    texlive-latex-base \
+    texlive-latex-recommended \
+    texlive-latex-extra \
+    texlive-fonts-recommended \
+    texlive-pictures \
     texlive-xetex \
-    texlive-luatex \
+    lmodern \
+    fonts-liberation \
     python3 \
     python3-pip \
     wget \
     curl \
     librsvg2-bin \
-    librsvg2-2 \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip3 install fastapi uvicorn python-multipart aiofiles httpx

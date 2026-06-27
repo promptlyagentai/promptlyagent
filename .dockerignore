@@ -14,7 +14,7 @@
 
 # Development dependencies
 node_modules
-# vendor - commented out to include in Docker image since we build from local dev
+vendor
 
 # Build artifacts
 /public/build

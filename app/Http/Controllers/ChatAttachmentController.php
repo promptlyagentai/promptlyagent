@@ -39,7 +39,7 @@ class ChatAttachmentController extends Controller
             abort(403, 'Unauthorized access to attachment');
         }
 
-        if (! Storage::exists($attachmentModel->storage_path)) {
+        if (! $attachmentModel->fileExists()) {
             abort(404, 'File not found');
         }
 
@@ -49,13 +49,19 @@ class ChatAttachmentController extends Controller
 
         $disk = $attachmentModel->getStorageDisk();
 
-        return Storage::disk($disk)->download(
-            $attachmentModel->storage_path,
-            $attachmentModel->filename,
-            [
-                'Content-Type' => $attachmentModel->mime_type,
-                'Cache-Control' => 'no-cache, must-revalidate',
-            ]
-        );
+        try {
+            return Storage::disk($disk)->download(
+                $attachmentModel->storage_path,
+                $attachmentModel->filename,
+                [
+                    'Content-Type' => $attachmentModel->mime_type,
+                    'Cache-Control' => 'no-cache, must-revalidate',
+                ]
+            );
+        } catch (\Throwable $e) {
+            report($e);
+
+            abort(404, 'File not found');
+        }
     }
 }

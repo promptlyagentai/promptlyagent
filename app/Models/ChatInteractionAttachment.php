@@ -45,6 +45,22 @@ class ChatInteractionAttachment extends Model
         return Str::startsWith($this->storage_path, 'chat-attachments/') ? 's3' : 'local';
     }
 
+    public function fileExists(): bool
+    {
+        try {
+            return Storage::disk($this->getStorageDisk())->exists($this->storage_path);
+        } catch (\Throwable $e) {
+            \Log::warning('Unable to check attachment file existence', [
+                'attachment_id' => $this->id,
+                'disk' => $this->getStorageDisk(),
+                'storage_path' => $this->storage_path,
+                'error' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
+    }
+
     /**
      * Get file content - works with both local and S3
      */
@@ -53,7 +69,7 @@ class ChatInteractionAttachment extends Model
         try {
             $disk = $this->getStorageDisk();
 
-            if (! Storage::disk($disk)->exists($this->storage_path)) {
+            if (! $this->fileExists()) {
                 return null;
             }
 
@@ -94,7 +110,7 @@ class ChatInteractionAttachment extends Model
     {
         $disk = $this->getStorageDisk();
 
-        if (Storage::disk($disk)->exists($this->storage_path)) {
+        if ($this->fileExists()) {
             if ($disk === 's3') {
                 // Generate temporary signed URL for S3
                 return Storage::disk('s3')->temporaryUrl(
@@ -119,7 +135,7 @@ class ChatInteractionAttachment extends Model
     {
         $disk = $this->getStorageDisk();
 
-        if (! Storage::disk($disk)->exists($this->storage_path)) {
+        if (! $this->fileExists()) {
             return null;
         }
 
@@ -174,7 +190,7 @@ class ChatInteractionAttachment extends Model
     {
         $disk = $this->getStorageDisk();
 
-        if (Storage::disk($disk)->exists($this->storage_path)) {
+        if ($this->fileExists()) {
             return Storage::disk($disk)->delete($this->storage_path);
         }
 
@@ -193,7 +209,7 @@ class ChatInteractionAttachment extends Model
 
         $disk = $this->getStorageDisk();
 
-        if (! Storage::disk($disk)->exists($this->storage_path)) {
+        if (! $this->fileExists()) {
             \Log::error('ChatInteractionAttachment: File does not exist', [
                 'attachment_id' => $this->id,
                 'filename' => $this->filename,

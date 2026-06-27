@@ -106,3 +106,7 @@ docker/searxng/settings.yml.new
 .claude/*.json
 .claude/context_*.json
 .claude/prp_status.json
+
+# Local working notes (kept local)
+/LOCAL_WORK_NOTES.md
+/PROMPTLYAGENT_IAC_PROJECT_DOCUMENTATION.md

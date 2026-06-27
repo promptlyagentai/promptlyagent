@@ -50,7 +50,7 @@ class SystemHealthService
         $services[] = $this->checkSearxng();
 
         // AI Services
-        $services[] = $this->checkOpenAI();
+        $services[] = $this->checkAiProvider();
 
         // Document Processing
         $services[] = $this->checkMarkitdown();
@@ -316,24 +316,35 @@ class SystemHealthService
         }
     }
 
-    private function checkOpenAI(): array
+    private function checkAiProvider(): array
     {
         try {
-            if (! config('prism.providers.openai.api_key')) {
+            $profile = $this->getModelConfig('low_cost');
+            $provider = strtolower((string) ($profile['provider'] ?? 'openai'));
+            $model = (string) ($profile['model'] ?? '');
+            $serviceName = $this->getAiProviderDisplayName($provider);
+
+            $credentialWarning = $this->getAiProviderCredentialWarning($provider);
+
+            if ($credentialWarning) {
                 return [
-                    'name' => 'OpenAI',
+                    'name' => $serviceName,
                     'type' => 'ai',
                     'status' => 'warning',
                     'response_time' => null,
-                    'details' => [],
-                    'message' => 'API key not configured',
+                    'details' => [
+                        'provider' => $provider,
+                        'model' => $model,
+                    ],
+                    'message' => $credentialWarning,
                 ];
             }
 
             $timing = $this->measureResponseTime(function () {
                 return $this->useLowCostModel()
+                    ->withSystemPrompt('You are a health-check responder. Reply with OK.')
                     ->withMessages([
-                        new \Prism\Prism\ValueObjects\Messages\UserMessage('test'),
+                        new \Prism\Prism\ValueObjects\Messages\UserMessage('Reply with OK.'),
                     ])
                     ->withMaxTokens(16)
                     ->generate();
@@ -344,26 +355,61 @@ class SystemHealthService
             }
 
             return [
-                'name' => 'OpenAI',
+                'name' => $serviceName,
                 'type' => 'ai',
                 'status' => 'healthy',
                 'response_time' => $timing['duration'],
                 'details' => [
-                    'models' => ['gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo'],
+                    'provider' => $provider,
+                    'model' => $model,
                 ],
                 'message' => 'API responding normally',
             ];
         } catch (Exception $e) {
             return [
-                'name' => 'OpenAI',
+                'name' => isset($serviceName) ? $serviceName : 'AI Provider',
                 'type' => 'ai',
                 'status' => 'error',
                 'response_time' => null,
-                'details' => [],
+                'details' => [
+                    'provider' => $provider ?? null,
+                    'model' => $model ?? null,
+                ],
                 'message' => 'API request failed: '.$e->getMessage(),
                 'error' => $e->getMessage(),
             ];
         }
+    }
+
+    private function getAiProviderDisplayName(string $provider): string
+    {
+        return match ($provider) {
+            'bedrock' => 'AWS Bedrock',
+            'anthropic' => 'Anthropic',
+            'google', 'gemini' => 'Google AI',
+            'mistral' => 'Mistral',
+            'groq' => 'Groq',
+            'ollama' => 'Ollama',
+            'xai' => 'xAI',
+            'deepseek' => 'DeepSeek',
+            'voyageai' => 'Voyage AI',
+            'openrouter' => 'OpenRouter',
+            default => 'OpenAI',
+        };
+    }
+
+    private function getAiProviderCredentialWarning(string $provider): ?string
+    {
+        return match ($provider) {
+            'bedrock' => (! config('prism.providers.bedrock.use_default_credential_provider')
+                && (! config('prism.providers.bedrock.api_key') || ! config('prism.providers.bedrock.api_secret')))
+                    ? 'AWS credentials not configured'
+                    : null,
+            'ollama' => null,
+            default => ! config("prism.providers.{$provider}.api_key")
+                ? 'API key not configured'
+                : null,
+        };
     }
 
     /**

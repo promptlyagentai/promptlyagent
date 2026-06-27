@@ -15,7 +15,7 @@ return [
     |
     */
 
-    'default' => env('BROADCAST_DRIVER', 'redis'),
+    'default' => env('BROADCAST_CONNECTION', env('BROADCAST_DRIVER', 'redis')),
 
     /*
     |--------------------------------------------------------------------------
@@ -80,6 +80,14 @@ return [
                 'port' => env('REVERB_BROADCAST_PORT', env('REVERB_SERVER_PORT', 8080)),
                 'scheme' => env('REVERB_BROADCAST_SCHEME', 'http'),
                 'useTLS' => env('REVERB_BROADCAST_SCHEME', 'http') === 'https',
+            ],
+            'client' => [
+                'key' => env('VITE_REVERB_APP_KEY', env('REVERB_APP_KEY')),
+                'app_id' => env('VITE_REVERB_APP_ID', env('REVERB_APP_ID')),
+                'host' => env('VITE_REVERB_HOST', env('REVERB_HOST')),
+                'port' => env('VITE_REVERB_PORT', env('REVERB_PORT', 443)),
+                'scheme' => env('VITE_REVERB_SCHEME', env('REVERB_SCHEME', 'https')),
+                'path' => env('VITE_REVERB_PATH', '/ws'),
             ],
         ],
 

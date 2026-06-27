@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Laravel\Socialite\Facades\Socialite;
 
 class SocialiteController extends Controller
@@ -24,9 +25,20 @@ class SocialiteController extends Controller
     public function handleGoogleCallback(): RedirectResponse
     {
         $googleUser = Socialite::driver('google')->stateless()->user();
+        $email = strtolower((string) $googleUser->getEmail());
+
+        if (! $this->isAllowedGoogleEmail($email)) {
+            Log::warning('Rejected Google login for disallowed email domain', [
+                'email_domain' => str_contains($email, '@') ? substr(strrchr($email, '@'), 1) : null,
+            ]);
+
+            return redirect()
+                ->route('login')
+                ->withErrors(['email' => 'Your Google account is not allowed to access this application.']);
+        }
 
         $user = User::firstOrCreate(
-            ['email' => $googleUser->getEmail()],
+            ['email' => $email],
             [
                 'name' => $googleUser->getName() ?? $googleUser->getNickname() ?? $googleUser->getEmail(),
                 'password' => bcrypt(uniqid('google_', true)),
@@ -44,5 +56,27 @@ class SocialiteController extends Controller
         Auth::login($user, true);
 
         return redirect()->intended(route('dashboard'));
+    }
+
+    private function isAllowedGoogleEmail(string $email): bool
+    {
+        if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return false;
+        }
+
+        $allowedDomains = array_map(
+            static fn (string $domain): string => strtolower(ltrim(trim($domain), '@')),
+            config('services.google.allowed_domains', [])
+        );
+
+        $allowedDomains = array_filter($allowedDomains);
+
+        if ($allowedDomains === []) {
+            return true;
+        }
+
+        $emailDomain = substr(strrchr($email, '@'), 1);
+
+        return in_array($emailDomain, $allowedDomains, true);
     }
 }

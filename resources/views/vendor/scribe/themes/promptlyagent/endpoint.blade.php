@@ -22,8 +22,18 @@
 <div class="{{ $language }}-example">
 @php
 $exampleContent = view("scribe::partials.example-requests.$language", get_defined_vars())->render();
-echo Parsedown::instance()->text($exampleContent);
+$exampleCode = trim($exampleContent);
+$languageClass = $language;
+
+if (preg_match('/^```([A-Za-z0-9_-]+)?\R(.*)\R```$/s', $exampleCode, $matches)) {
+    $languageClass = $matches[1] ?: $language;
+    $exampleCode = $matches[2];
+} elseif (preg_match('/^<pre><code(?: class="language-([^"]+)")?>(.*)<\/code><\/pre>$/s', $exampleCode, $matches)) {
+    $languageClass = $matches[1] ?: $language;
+    $exampleCode = html_entity_decode($matches[2], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+}
 @endphp
+<pre><code class="language-{{ $languageClass }}">{!! e($exampleCode) !!}</code></pre>
 </div>
 
 @endforeach

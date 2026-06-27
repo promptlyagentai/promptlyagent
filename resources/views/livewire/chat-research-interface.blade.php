@@ -7,6 +7,7 @@
 <div x-data="{ sidebarOpen: false }"
      @open-sessions-sidebar.window="$nextTick(() => sidebarOpen = true)"
      class="p-2"
+     data-chat-research-interface
      data-current-interaction-id="{{ $currentInteractionId }}"
      data-current-session-id="{{ $currentSessionId }}">
     <meta name="interaction-id" content="{{ $currentInteractionId }}" data-livewire-update>
@@ -927,6 +928,14 @@
 
         // Helper function to set up Echo subscriptions for an interaction
         function setupEchoSubscriptions(interactionId) {
+            if (window.statusStreamManager && typeof window.statusStreamManager.setupEchoSubscriptions === 'function') {
+                window.statusStreamManager.setupEchoSubscriptions(interactionId);
+                return;
+            }
+
+            console.warn('StatusStreamManager unavailable; skipping legacy Blade Echo subscriptions to avoid duplicate channel ownership');
+            return;
+
             if (!window.Echo || !interactionId) {
                 console.error('Echo not available or no interaction ID provided');
                 return;
